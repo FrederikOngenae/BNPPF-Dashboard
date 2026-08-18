@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyGuide — production progress</title>
+<style>
+  /* ---- brand palette (from the MyGuide PowerPoint theme) ----
+     Dark 1 #000000 · Light 1 #ffffff · Dark 2 #017f50 · Light 2 #e8e8e8
+     Accent 1 #004c45 · Accent 2 #00776c · Accent 3 #9aaf9f
+     Accent 4 #8a7a70 · Accent 5 #c5cdd0 · Accent 6 #5c899e            */
+  :root{
+    color-scheme: light;
+    --brand:#004c45; --brand-2:#00776c; --brand-deep:#002e29; --brand-ink:#ffffff;
+    --page:#f7f8f7; --surface:#ffffff;
+    --ink:#000000; --ink-2:#4a544f; --muted:#7d8a84;
+    --grid:#e8e8e8; --axis:#c5cdd0; --border:rgba(0,0,0,0.11);
+    --band:rgba(0,76,69,0.045);
+    --track:#e8e8e8;
+    --fill:#017f50;            /* production progress — single hue */
+    --ring:#004c45;            /* 100% complete ring */
+    --review:#fab219;          /* feedback in review */
+    --valid:#004c45; --valid-ink:#ffffff;
+    --sage:#9aaf9f; --steel:#5c899e; --taupe:#8a7a70;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05);
+    --radius:10px;
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --brand:#004c45; --brand-2:#1a9b8e; --brand-deep:#001f1c; --brand-ink:#ffffff;
+    --page:#0c0e0d; --surface:#181a19;
+    --ink:#ffffff; --ink-2:#c5cdd0; --muted:#8c9a94;
+    --grid:#2b2f2d; --axis:#3a403d; --border:rgba(255,255,255,0.12);
+    --band:rgba(76,192,175,0.07);
+    --track:#2b2f2d;
+    --fill:#14a86e;
+    --ring:#4cc0af;
+    --review:#fab219;
+    --valid:#4cc0af; --valid-ink:#062723;
+    --sage:#9aaf9f; --steel:#7ea9bd; --taupe:#a8968a;
+    --shadow:none;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--page); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1360px;margin:0 auto;padding:0 24px 72px}
+
+  /* ---------- header ---------- */
+  header.band{
+    background:linear-gradient(135deg,var(--brand) 0%,var(--brand-deep) 100%);
+    color:var(--brand-ink); padding:26px 0 30px; margin-bottom:26px;
+  }
+  header.band .wrap{padding-bottom:0}
+  .band-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  h1{font-size:23px;font-weight:650;margin:0;letter-spacing:-.01em}
+  h1 .lower{font-weight:350;opacity:.82}
+  .band-sub{margin:5px 0 0;font-size:13px;opacity:.82;max-width:72ch}
+  .band-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .chipbtn{
+    background:rgba(255,255,255,.13); color:var(--brand-ink);
+    border:1px solid rgba(255,255,255,.24); border-radius:999px;
+    padding:6px 13px; font-size:12.5px; font-family:inherit; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .chipbtn:hover{background:rgba(255,255,255,.22)}
+  .chipbtn[aria-pressed="true"]{background:#fff;color:var(--brand);border-color:#fff;font-weight:600}
+
+  .hero{display:flex;align-items:flex-end;gap:34px;margin-top:24px;flex-wrap:wrap}
+  .hero-fig{font-size:64px;line-height:.95;font-weight:600;letter-spacing:-.03em}
+  .hero-fig small{font-size:26px;font-weight:400;opacity:.7;margin-left:2px}
+  .hero-lab{font-size:12.5px;text-transform:uppercase;letter-spacing:.09em;opacity:.78;margin-bottom:9px}
+  .hero-meta{font-size:13px;opacity:.88;padding-bottom:9px;min-width:240px}
+  .hero-meta b{font-weight:600}
+  .herobar{flex:1 1 300px;min-width:250px;padding-bottom:11px}
+  .herobar-track{height:10px;border-radius:5px;background:rgba(0,0,0,.32);overflow:hidden}
+  .herobar-fill{display:block;height:100%;border-radius:5px;background:#fff;transition:width .3s ease}
+  .herobar-scale{display:flex;justify-content:space-between;font-size:11px;opacity:.62;margin-top:5px;font-variant-numeric:tabular-nums}
+
+  /* ---------- sections ---------- */
+  section{margin-top:30px}
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+  h2{font-size:15px;font-weight:600;margin:0;letter-spacing:-.005em}
+  .sec-note{font-size:12.5px;color:var(--muted)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+  /* ---------- pipeline ---------- */
+  .pipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .pstep{padding:14px 16px 15px}
+  .pstep-lab{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+             display:flex;align-items:center;gap:7px;min-height:32px}
+  .pnum{width:17px;height:17px;border-radius:50%;background:var(--grid);color:var(--ink-2);
+        font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none;letter-spacing:0}
+  .pstep-val{font-size:27px;font-weight:600;letter-spacing:-.02em;line-height:1.05;margin-top:7px}
+  .pstep-val small{font-size:14px;font-weight:400;color:var(--ink-2);margin-left:3px}
+  .minibar{height:5px;border-radius:3px;background:var(--track);margin-top:10px;overflow:hidden}
+  .minibar>i{display:block;height:100%;border-radius:3px;background:var(--fill)}
+
+  /* ---------- tiles ---------- */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:10px}
+  .tile{padding:13px 15px 14px}
+  .tile-lab{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px}
+  .tile-val{font-size:25px;font-weight:600;letter-spacing:-.02em;line-height:1.05}
+  .tile-val small{font-size:14px;font-weight:400;color:var(--ink-2)}
+  .tile-sub{font-size:12px;color:var(--ink-2);margin-top:3px}
+
+  /* ---------- filters ---------- */
+  .filters{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:11px 14px;margin-bottom:12px}
+  .fgroup{display:flex;gap:6px;align-items:center}
+  .fgroup>span{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-right:2px}
+  .f{border:1px solid var(--border);background:transparent;color:var(--ink-2);
+     border-radius:999px;padding:4px 11px;font-size:12.5px;font-family:inherit;cursor:pointer}
+  .f:hover{background:var(--grid)}
+  .f[aria-pressed="true"]{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:550}
+
+  /* ---------- matrix ---------- */
+  .matrix{padding:4px 0 6px;overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:1180px}
+  thead th{font-size:11.5px;font-weight:600;color:var(--ink-2);text-align:left;
+           padding:12px 10px 9px;border-bottom:1px solid var(--grid);vertical-align:bottom}
+  thead th.chap{width:13.8%}
+  thead th .chnum{display:block;color:var(--muted);font-weight:500;font-size:10.5px;letter-spacing:.06em;margin-bottom:2px}
+  thead th.total{text-align:right;width:96px}
+  tbody tr{border-bottom:1px solid var(--grid)}
+  tbody tr:last-child{border-bottom:none}
+  tbody tr.langrow:hover{background:color-mix(in srgb,var(--grid) 45%,transparent)}
+  td{padding:8px 10px;vertical-align:middle}
+
+  /* segment band */
+  .segrow td{border:none;background:transparent;padding:20px 10px 7px;font-size:13px;color:var(--ink);font-weight:650}
+  .segrow:first-child td{padding-top:8px}
+  .segrow .rule{display:block;height:2px;background:var(--brand);border-radius:1px;margin-top:6px}
+  .gpct{font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+  /* audience band — carries the slide counts */
+  .audrow{background:var(--band);border-bottom:1px solid var(--grid)}
+  .audrow td{padding:9px 10px}
+  .audrow .aname{font-size:13px;font-weight:650;display:flex;align-items:center;gap:7px}
+  .audrow .ameta{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .slidebox{display:flex;align-items:center;gap:4px;justify-content:flex-start}
+  .slidebox input{
+    width:46px;font-family:inherit;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;
+    text-align:right;padding:3px 5px;border:1px solid var(--axis);border-radius:5px;
+    background:var(--surface);color:var(--ink);
+  }
+  .slidebox input:focus{outline:none;border-color:var(--brand-2)}
+  .slidebox input:disabled{border-color:transparent;background:transparent;color:var(--ink-2)}
+  .slidebox input::-webkit-outer-spin-button,.slidebox input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .slidebox input[type=number]{-moz-appearance:textfield}
+  .slidebox span{font-size:11px;color:var(--muted)}
+  .audtotal{text-align:right;font-size:12.5px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .audtotal small{display:block;font-size:10.5px;font-weight:400;color:var(--muted)}
+
+  /* language rows */
+  .langcell{min-width:200px;padding-left:22px !important}
+  .langname{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px}
+  .langmeta{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .badge{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+         border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--ink-2)}
+  .badge.src{border-color:var(--brand-2);color:var(--brand-2)}
+
+  .cellwrap{display:flex;flex-direction:column;gap:5px;width:100%}
+  .rowA{display:flex;align-items:center;gap:7px;width:100%}
+  .zones{flex:1 1 auto;min-width:66px;display:flex;gap:2px;cursor:pointer;
+         padding:3px;margin:-3px;border-radius:6px;outline:none}
+  .zones:focus-visible{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--brand-2)}
+  .zones.locked{cursor:default}
+  .zones.full{box-shadow:inset 0 0 0 2px var(--ring)}
+  .z{flex:1 1 0;min-width:0;height:16px;background:var(--track);border-radius:2px;transition:background .12s ease}
+  .z:first-child{border-radius:4px 2px 2px 4px}
+  .z:last-child{border-radius:2px 4px 4px 2px}
+  .z.on{background:var(--fill)}
+  .cellpct{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;
+           width:30px;text-align:right;flex:none}
+  .cellpct.full{color:var(--fill);font-weight:700;font-size:13px}
+
+  .rowB{display:flex;align-items:center;gap:4px}
+  .fblab{font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+  .pips{display:flex;gap:3px}
+  .pip{width:19px;height:19px;border-radius:5px;font-family:inherit;font-size:10px;font-weight:700;
+       border:1px solid var(--axis);background:transparent;color:var(--muted);
+       cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1}
+  .pip:hover{border-color:var(--ink-2)}
+  .pip:disabled{cursor:default}
+  .pip.s1{background:var(--review);border-color:var(--review);color:#3d2a00}
+  .pip.s2{background:var(--fill);border-color:var(--fill);color:#fff}
+  .pip.vok{background:var(--valid);border-color:var(--valid);color:var(--valid-ink)}
+
+  .totalcell{text-align:right;white-space:nowrap}
+  .totalpct{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+  .totalbar{height:4px;border-radius:2px;background:var(--track);margin-top:5px;overflow:hidden}
+  .totalbar>i{display:block;height:100%;border-radius:2px;background:var(--fill)}
+  .totalsub{font-size:10.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+
+  /* ---------- chapter summary ---------- */
+  .chaptbl{padding:2px 0 4px;overflow-x:auto}
+  .chaptbl table{min-width:860px}
+  .chaptbl th,.chaptbl td{padding:11px 14px;border-bottom:1px solid var(--grid);font-size:13px;vertical-align:middle}
+  .chaptbl tr:last-child td{border-bottom:none}
+  .chaptbl th{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+  .chaptbl th.n,.chaptbl td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .chaptbl .cname{font-weight:550}
+  .chaptbl .cnum{font-size:10.5px;color:var(--muted);font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+  .cbar{height:9px;border-radius:5px;background:var(--track);overflow:hidden;min-width:110px}
+  .cbar>i{display:block;height:100%;border-radius:5px;background:var(--fill)}
+
+  /* ---------- legend / actions ---------- */
+  .legend{display:flex;gap:20px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-top:14px}
+  .lg{display:flex;align-items:center;gap:7px}
+  .lgzones{display:flex;gap:2px}
+  .lgzones i{width:7px;height:13px;border-radius:2px;background:var(--track)}
+  .lgzones i.on{background:var(--fill)}
+  .swatch{width:13px;height:13px;border-radius:3px;flex:none}
+
+  .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px;align-items:center}
+  .btn{font-family:inherit;font-size:13px;padding:8px 14px;border-radius:7px;cursor:pointer;
+       border:1px solid var(--border);background:var(--surface);color:var(--ink)}
+  .btn:hover{background:var(--grid)}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:550}
+  .btn.primary:hover{background:var(--brand-deep)}
+  .dirty{font-size:12.5px;color:var(--taupe);display:none;align-items:center;gap:6px}
+  .dirty.show{display:inline-flex}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--review);flex:none}
+
+  #tableview{display:none;margin-top:14px;padding:4px 0 8px;overflow-x:auto}
+  #tableview.show{display:block}
+  #tableview table{min-width:980px}
+  #tableview th,#tableview td{font-size:12.5px;padding:7px 11px;text-align:left;
+    border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
+  #tableview th{font-weight:600;color:var(--ink-2)}
+  #tableview td.n,#tableview th.n{text-align:right}
+
+  .foot{margin-top:28px;font-size:12px;color:var(--muted);line-height:1.65}
+  .foot code{background:var(--grid);padding:1px 5px;border-radius:4px;font-size:11.5px;color:var(--ink-2)}
+  @media print{.band-tools,.actions,.filters{display:none}body{background:#fff}}
+
+  /* ---------- embed mode (inside a Webflow iframe) ---------- */
+  html.embed body{background:var(--surface)}
+  html.embed .wrap{padding-bottom:34px}
+  html.embed #lockBtn,
+  html.embed #dlHtml, html.embed #dlJson, html.embed #upJson, html.embed #fileIn,
+  html.embed .dirty,
+  html.embed .ednote{display:none !important}
+  html.embed #dataSec .sec-head{display:none}
+  html.embed #dataSec{margin-top:22px}
+  html.embed .foot{margin-top:0}
+</style>
+</head>
+<body>
+
+<script id="myguide-data" type="application/json">
+{
+  "project": "MyGuide",
+  "updated": "2026-08-18",
+  "locked": false,
+  "baseWeight": 2,
+  "slideWeighting": true,
+  "chapters": [
+    "Welkom bij {tier} banking",
+    "Advies op maat",
+    "6 kernvragen",
+    "MyDebrief",
+    "Documentenbibliotheek"
+  ],
+  "segments": ["Private", "Priority"],
+  "audiences": ["Individual", "Professional"],
+  "languages": ["NL", "FR", "EN"],
+  "baseLanguage": "NL",
+  "slides": {},
+  "cells": {}
+}
+</script>
+
+<header class="band">
+  <div class="wrap">
+    <div class="band-top">
+      <div>
+        <h1>MyGuide <span class="lower">— production progress</span></h1>
+        <p class="band-sub">Structured by segment › audience › language. Slide counts are set once per audience — they are identical across NL, FR and EN. The NL decks are the base versions all other languages derive from. All percentages are weighted; the method is explained in the notes at the bottom.</p>
+      </div>
+      <div class="band-tools">
+        <button class="chipbtn" id="swBtn" aria-pressed="true" title="Weight each chapter by its slide count">⚖ <span>Slide-weighted</span></button>
+        <button class="chipbtn" id="lockBtn" aria-pressed="false" title="Lock editing (client view)">🔓 <span>Editing on</span></button>
+        <button class="chipbtn" id="themeBtn" title="Light / dark">◐ <span>Dark</span></button>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div>
+        <div class="hero-lab">Weighted progress</div>
+        <div class="hero-fig"><span id="heroPct">0</span><small>%</small></div>
+      </div>
+      <div class="herobar">
+        <div class="herobar-track"><i class="herobar-fill" id="heroBar" style="width:0%"></i></div>
+        <div class="herobar-scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+      </div>
+      <div class="hero-meta">
+        <div><b id="doneCount">0</b> of 60 chapters at 100%</div>
+        <div><b id="valCount">0</b> client-validated · <b id="slideCount">—</b> slides across 12 decks</div>
+        <div style="opacity:.72">updated <span id="updStamp">—</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section>
+    <div class="sec-head"><h2>Delivery pipeline</h2><span class="sec-note">how far the 60 chapters have moved through each stage</span></div>
+    <div class="pipe" id="pipe"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Progress by dimension</h2><span class="sec-note" id="wNote2">weighted average — see the notes under Data</span></div>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>All decks — chapter by chapter</h2>
+      <span class="sec-note" id="matrixNote">click a zone to set progress · click 1 / 2 / ✓ for feedback and validation · slide counts sit on the audience row</span>
+    </div>
+    <div class="card filters">
+      <div class="fgroup"><span>Segment</span><div id="fSeg"></div></div>
+      <div class="fgroup"><span>Audience</span><div id="fAud"></div></div>
+      <div class="fgroup"><span>Language</span><div id="fLang"></div></div>
+    </div>
+    <div class="card matrix">
+      <table>
+        <thead><tr id="matHead"></tr></thead>
+        <tbody id="matBody"></tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <div class="lg"><span class="lgzones"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span> 10 zones = 10% each (shown: 30%)</div>
+      <div class="lg"><span class="swatch" style="background:var(--fill)"></span> production progress</div>
+      <div class="lg"><span class="swatch" style="box-shadow:inset 0 0 0 2px var(--ring);background:var(--fill)"></span> ✓ complete (outlined)</div>
+      <div class="lg"><span class="pip s1" style="cursor:default">1</span><span class="pip s2" style="cursor:default">2</span> feedback round — amber = in review, green = processed</div>
+      <div class="lg"><span class="pip vok" style="cursor:default">✓</span> validated by client</div>
+      <div class="lg"><span class="badge src">base</span> master version other languages derive from</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Progress by chapter</h2><span class="sec-note">across all 12 variants</span></div>
+    <div class="card chaptbl">
+      <table>
+        <thead><tr>
+          <th>Chapter</th><th style="width:32%">Weighted progress</th><th class="n">%</th>
+          <th class="n">Slides / deck</th><th class="n">FB 1</th><th class="n">FB 2</th><th class="n">Validated</th>
+        </tr></thead>
+        <tbody id="chapBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="dataSec">
+    <div class="sec-head"><h2>Data</h2></div>
+    <div class="actions">
+      <button class="btn primary" id="dlHtml">⤓ Download dashboard (.html)</button>
+      <button class="btn" id="dlJson">⤓ Export figures (.json)</button>
+      <button class="btn" id="upJson">⤒ Import figures</button>
+      <input type="file" id="fileIn" accept=".json,application/json" hidden>
+      <button class="btn" id="tblBtn" aria-pressed="false">☰ Table view</button>
+      <span class="dirty" id="dirty"><span class="dot"></span> unsaved changes</span>
+    </div>
+    <div class="card" id="tableview">
+      <table>
+        <thead><tr id="tvHead"></tr></thead>
+        <tbody id="tvBody"></tbody>
+      </table>
+    </div>
+    <p class="foot">
+      <span class="ednote"><b>How to update.</b> Click zone <i>n</i> in a strip to set that chapter to <i>n</i>×10%; click the last filled zone to step back. Arrow keys work when a strip has focus. The <b>1</b> and <b>2</b> pips cycle <i>not started → in review → processed</i>; <b>✓</b> toggles client validation.<br>
+      <b>Slide counts</b> live on the shaded audience row and apply to all three languages of that audience and segment — enter them once.<br></span>
+      <b>Weighting.</b> Every percentage on this page is a weighted average, not a plain one, so that "50% done" reflects effort rather than a count of ticked boxes. Two factors combine:<br>
+      &nbsp;&nbsp;<b>1 · Base language.</b> The NL decks are built from scratch; FR and EN are derived from them. We estimate the base version takes roughly <span id="wNote">2</span>× as long, so an NL chapter carries twice the weight of the same chapter in FR or EN. That factor is an estimate — if the translation rounds turn out heavier or lighter than expected, change <code>baseWeight</code> in the <code>myguide-data</code> block and every figure recalculates.<br>
+      &nbsp;&nbsp;<b>2 · Slide volume.</b> With <i>Slide-weighted</i> on (top right), each chapter also counts in proportion to its slide count, so a 22-slide chapter moves the needle more than a 9-slide one. Switch it off to weight all five chapters equally. With no slide counts entered at all, this factor has no effect and averages fall back to equal chapters — but while you are <i>part-way</i> through entering them the percentages will look skewed, because chapters still on 0 slides carry no weight. Fill in all five, or work with <i>Equal chapters</i> on until you have.<br>
+      <span class="ednote"><b>Sharing with the client.</b> Click <i>Download dashboard</i> for a single standalone .html file with the current figures baked in and editing locked. Just send it — no server, no install. To publish to a web page instead, export <i>Cijfers</i> as <code>progress.json</code>, drop it next to this file on your host, and load the page with <code>?data=progress.json</code>.<br>
+      <b>Chapter titles and weighting</b> live in the <code>myguide-data</code> block at the top of the file; <code>{tier}</code> resolves to Private or Priority. Colours come from the MyGuide PowerPoint theme (Accent 1 <code>#004c45</code>, Dark 2 <code>#017f50</code>).</span>
+      <span id="srcNote"></span>
+    </p>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DATA = JSON.parse(document.getElementById('myguide-data').textContent);
+  var SEG=DATA.segments, AUD=DATA.audiences, LANG=DATA.languages, CH=DATA.chapters;
+  var NCH=CH.length, BW=DATA.baseWeight||2, BASELANG=DATA.baseLanguage||LANG[0];
+  var SW = DATA.slideWeighting!==false;
+  var ALLCH=[]; for(var _i=0;_i<NCH;_i++) ALLCH.push(_i);
+  var slides = DATA.slides || {};
+  var cells  = DATA.cells  || {};
+  var locked = !!DATA.locked;
+  var dirty  = false;
+
+  /* ---- embed mode -------------------------------------------------------
+     ?embed=1 forces it on, ?embed=0 forces it off, otherwise it turns on
+     automatically when the page is running inside an iframe. Embed mode is
+     read-only and hides the export controls.
+     ?data=<url> loads figures from an external JSON (defaults to
+     progress.json when embedded), so publishing an update means replacing
+     that one small file rather than the whole dashboard.                  */
+  var PARAMS  = new URLSearchParams(location.search);
+  var INFRAME = (function(){ try{ return window.parent!==window; }catch(e){ return true; } })();
+  var EMBED   = PARAMS.get('embed')==='1' || (PARAMS.get('embed')!=='0' && INFRAME);
+  var DATAURL = PARAMS.get('data') || (EMBED ? 'progress.json' : null);
+  if(EMBED){ locked = true; document.documentElement.classList.add('embed'); }
+
+  var filters={ seg:new Set(SEG), aud:new Set(AUD), lang:new Set(LANG) };
+
+  /* hierarchy: segment › audience › language */
+  var groups=[], decks=[];
+  SEG.forEach(function(s){ AUD.forEach(function(a){
+    var gid=a+'|'+s;
+    var g={ id:gid, seg:s, aud:a, decks:[] };
+    LANG.forEach(function(l){
+      var base = l===BASELANG;
+      var d={ id:a+'|'+l+'|'+s, gid:gid, aud:a, lang:l, seg:s, base:base, w: base?BW:1 };
+      g.decks.push(d); decks.push(d);
+    });
+    groups.push(g);
+  });});
+
+  /* ---- data accessors ---- */
+  function slideRow(gid){
+    if(!slides[gid]) slides[gid]=new Array(NCH).fill(0);
+    while(slides[gid].length<NCH) slides[gid].push(0);
+    return slides[gid];
+  }
+  function slideOf(gid,i){ var v=slideRow(gid)[i]; return typeof v==='number'?v:0; }
+  function groupSlides(gid){ var s=0; for(var i=0;i<NCH;i++) s+=slideOf(gid,i); return s; }
+  function cell(id,i){
+    if(!cells[id]) cells[id]=[];
+    if(!cells[id][i]) cells[id][i]={p:0,f1:0,f2:0,v:false};
+    var c=cells[id][i];
+    if(typeof c.p!=='number') c.p=0;
+    if(typeof c.f1!=='number') c.f1=0;
+    if(typeof c.f2!=='number') c.f2=0;
+    c.v=!!c.v;
+    return c;
+  }
+  function touch(){ dirty=true; document.getElementById('dirty').classList.add('show'); }
+  /* Weighted average of chapter progress.
+     Weight per cell = language factor (base ×BW) × slide count (when slide weighting is on).
+     If the slide side of the weight sums to zero — no slide counts entered yet — we fall
+     back to the language factor alone so the figures stay meaningful on an empty file.   */
+  function agg(list, chaps){
+    var num=0, den=0;
+    list.forEach(function(d){ chaps.forEach(function(i){
+      var w = d.w * (SW ? slideOf(d.gid,i) : 1);
+      num += cell(d.id,i).p * w; den += w;
+    });});
+    if(den>0) return num/den;
+    num=0; den=0;
+    list.forEach(function(d){ chaps.forEach(function(i){
+      num += cell(d.id,i).p * d.w; den += d.w;
+    });});
+    return den? num/den : 0;
+  }
+  function deckPct(d){ return agg([d], ALLCH); }
+  function wavg(list){ return agg(list, ALLCH); }
+  function chapWavg(i,list){ return agg(list||decks, [i]); }
+  function chapShort(i){ return CH[i].replace('{tier}','Private / Priority'); }
+  function chapTitle(i,seg){ return CH[i].replace('{tier}',seg||'Private'); }
+  function fmt(n){ return Math.round(n); }
+  function visDecks(){ return decks.filter(function(d){
+    return filters.seg.has(d.seg)&&filters.aud.has(d.aud)&&filters.lang.has(d.lang); }); }
+
+  /* ---------------- filters ---------------- */
+  function buildFilters(){
+    [['fSeg',SEG,'seg'],['fAud',AUD,'aud'],['fLang',LANG,'lang']].forEach(function(cfg){
+      var host=document.getElementById(cfg[0]); host.innerHTML='';
+      host.style.display='flex'; host.style.gap='6px';
+      cfg[1].forEach(function(v){
+        var b=document.createElement('button');
+        b.className='f'; b.textContent=v; b.setAttribute('aria-pressed','true');
+        b.onclick=function(){
+          var s=filters[cfg[2]];
+          if(s.has(v)){ if(s.size>1) s.delete(v); } else s.add(v);
+          b.setAttribute('aria-pressed', s.has(v)?'true':'false');
+          renderAll();
+        };
+        host.appendChild(b);
+      });
+    });
+  }
+
+  /* ---------------- matrix ---------------- */
+  function buildHead(){
+    var tr=document.getElementById('matHead'); tr.innerHTML='';
+    var th=document.createElement('th'); th.textContent='Segment › audience › language'; tr.appendChild(th);
+    for(var i=0;i<NCH;i++){
+      var t=document.createElement('th'); t.className='chap';
+      t.innerHTML='<span class="chnum">Ch '+(i+1)+'</span>'+chapShort(i);
+      tr.appendChild(t);
+    }
+    var tt=document.createElement('th'); tt.className='total'; tt.textContent='Deck total'; tr.appendChild(tt);
+  }
+
+  var FBL=['not started','in review','processed'];
+
+  function langCell(d,i){
+    var c=cell(d.id,i);
+    var wrap=document.createElement('div'); wrap.className='cellwrap';
+    var ctx=d.seg+' banking · '+d.aud+' · '+d.lang+'\n'+chapTitle(i,d.seg);
+
+    var a=document.createElement('div'); a.className='rowA';
+    var strip=document.createElement('div');
+    strip.className='zones'+(locked?' locked':'')+(c.p>=100?' full':'');
+    strip.tabIndex=locked?-1:0;
+    strip.setAttribute('role','slider');
+    strip.setAttribute('aria-valuemin','0'); strip.setAttribute('aria-valuemax','100');
+    strip.setAttribute('aria-valuenow',c.p);
+    strip.setAttribute('aria-label',ctx.replace('\n',' — ')+': '+c.p+'% complete');
+    strip.title=ctx+'\n'+slideOf(d.gid,i)+' slides · '+c.p+'% complete';
+    var filled=Math.round(c.p/10);
+    for(var z=0;z<10;z++){ var s=document.createElement('div'); s.className='z'+(z<filled?' on':''); strip.appendChild(s); }
+    if(!locked){
+      strip.addEventListener('click',function(ev){
+        var r=strip.getBoundingClientRect();
+        var idx=Math.max(0,Math.min(9,Math.floor(((ev.clientX-r.left)/r.width)*10)));
+        var target=(idx+1)*10;
+        c.p=(c.p===target)? idx*10 : target;
+        touch(); renderAll();
+      });
+      strip.addEventListener('keydown',function(ev){
+        var step=0;
+        if(ev.key==='ArrowRight'||ev.key==='ArrowUp') step=10;
+        else if(ev.key==='ArrowLeft'||ev.key==='ArrowDown') step=-10;
+        else if(ev.key==='Home'){ c.p=0; touch(); renderAll(); ev.preventDefault(); return; }
+        else if(ev.key==='End'){ c.p=100; touch(); renderAll(); ev.preventDefault(); return; }
+        else return;
+        ev.preventDefault(); c.p=Math.max(0,Math.min(100,c.p+step)); touch(); renderAll();
+      });
+    }
+    var pc=document.createElement('span');
+    pc.className='cellpct'+(c.p>=100?' full':'');
+    pc.textContent = c.p>=100 ? '✓' : (c.p===0 ? '–' : c.p+'%');
+    a.appendChild(strip); a.appendChild(pc);
+
+    var b=document.createElement('div'); b.className='rowB';
+    var lab=document.createElement('span'); lab.className='fblab'; lab.textContent='FB'; b.appendChild(lab);
+    var pips=document.createElement('div'); pips.className='pips';
+    [['f1','1','Feedback round 1'],['f2','2','Feedback round 2']].forEach(function(k){
+      var st=c[k[0]];
+      var p=document.createElement('button');
+      p.className='pip'+(st===1?' s1':st===2?' s2':'');
+      p.textContent=k[1]; p.disabled=locked;
+      p.title=ctx+'\n'+k[2]+': '+FBL[st];
+      p.setAttribute('aria-label',ctx.replace('\n',' — ')+' — '+k[2]+': '+FBL[st]);
+      p.onclick=function(){ c[k[0]]=(c[k[0]]+1)%3; touch(); renderAll(); };
+      pips.appendChild(p);
+    });
+    var v=document.createElement('button');
+    v.className='pip'+(c.v?' vok':''); v.textContent='✓'; v.disabled=locked;
+    v.title=ctx+'\nValidated by client: '+(c.v?'yes':'no');
+    v.setAttribute('aria-label',ctx.replace('\n',' — ')+' — validated by client: '+(c.v?'yes':'no'));
+    v.setAttribute('aria-pressed', c.v?'true':'false');
+    v.onclick=function(){ c.v=!c.v; touch(); renderAll(); };
+    pips.appendChild(v);
+    b.appendChild(pips);
+
+    wrap.appendChild(a); wrap.appendChild(b);
+    return wrap;
+  }
+
+  function buildBody(){
+    var tb=document.getElementById('matBody'); tb.innerHTML='';
+    var any=false;
+
+    SEG.forEach(function(sg){
+      if(!filters.seg.has(sg)) return;
+      var segDecks=visDecks().filter(function(d){ return d.seg===sg; });
+      if(!segDecks.length) return;
+
+      var sr=document.createElement('tr'); sr.className='segrow';
+      var sc=document.createElement('td'); sc.colSpan=NCH+2;
+      sc.innerHTML='<span>'+sg+' banking</span> <span class="gpct">— '+fmt(wavg(segDecks))+'%</span><span class="rule"></span>';
+      sr.appendChild(sc); tb.appendChild(sr);
+
+      groups.filter(function(g){ return g.seg===sg && filters.aud.has(g.aud); }).forEach(function(g){
+        var rows=g.decks.filter(function(d){ return filters.lang.has(d.lang); });
+        if(!rows.length) return;
+        any=true;
+
+        /* --- audience row: name + slide count per chapter --- */
+        var ar=document.createElement('tr'); ar.className='audrow';
+        var ac=document.createElement('td');
+        ac.innerHTML='<div class="aname">'+g.aud+' <span class="gpct">'+fmt(wavg(rows))+'%</span></div>'+
+                     '<div class="ameta">'+sg+' banking · slides apply to all languages</div>';
+        ar.appendChild(ac);
+        for(var i=0;i<NCH;i++){
+          (function(i){
+            var td=document.createElement('td');
+            var box=document.createElement('label'); box.className='slidebox';
+            var inp=document.createElement('input');
+            inp.type='number'; inp.min='0'; inp.max='999';
+            inp.value=slideOf(g.id,i)||''; inp.placeholder='0'; inp.disabled=locked;
+            inp.title=g.aud+' · '+sg+' banking\n'+chapTitle(i,sg)+'\nSlides in this chapter (all languages)';
+            inp.setAttribute('aria-label',g.aud+' '+sg+' banking — '+chapTitle(i,sg)+': slides');
+            inp.addEventListener('change',function(){
+              slideRow(g.id)[i]=Math.max(0,Math.min(999,parseInt(inp.value,10)||0));
+              touch(); renderAll();
+            });
+            var sp=document.createElement('span'); sp.textContent='slides';
+            box.appendChild(inp); box.appendChild(sp);
+            td.appendChild(box); ar.appendChild(td);
+          })(i);
+        }
+        var at=document.createElement('td'); at.className='audtotal';
+        at.innerHTML=(groupSlides(g.id)||'—')+'<small>slides / deck</small>';
+        ar.appendChild(at); tb.appendChild(ar);
+
+        /* --- one row per language --- */
+        rows.forEach(function(d){
+          var tr=document.createElement('tr'); tr.className='langrow';
+          var td=document.createElement('td'); td.className='langcell';
+          var nm=document.createElement('div'); nm.className='langname';
+          nm.appendChild(document.createTextNode(d.lang));
+          if(d.base){ var bg=document.createElement('span'); bg.className='badge src'; bg.textContent='base'; nm.appendChild(bg); }
+          var mt=document.createElement('div'); mt.className='langmeta';
+          mt.textContent='MyGuide '+d.aud.toLowerCase()+' · '+d.lang+' · '+d.seg+' banking';
+          td.appendChild(nm); td.appendChild(mt); tr.appendChild(td);
+
+          for(var i=0;i<NCH;i++){ var c=document.createElement('td'); c.appendChild(langCell(d,i)); tr.appendChild(c); }
+
+          var p=deckPct(d);
+          var tc=document.createElement('td'); tc.className='totalcell';
+          tc.innerHTML='<div class="totalpct">'+fmt(p)+'%</div>'+
+                       '<div class="totalbar"><i style="width:'+p+'%"></i></div>';
+          tr.appendChild(tc); tb.appendChild(tr);
+        });
+      });
+    });
+
+    if(!any){
+      var tr=document.createElement('tr'), td=document.createElement('td');
+      td.colSpan=NCH+2; td.style.padding='26px'; td.style.color='var(--muted)';
+      td.textContent='No decks match the current filters.';
+      tr.appendChild(td); tb.appendChild(tr);
+    }
+  }
+
+  /* ---------------- pipeline ---------------- */
+  function counts(){
+    var n=decks.length*NCH, done=0,f1=0,f2=0,val=0,sl=0;
+    decks.forEach(function(d){ for(var i=0;i<NCH;i++){ var c=cell(d.id,i);
+      if(c.p>=100) done++; if(c.f1===2) f1++; if(c.f2===2) f2++; if(c.v) val++;
+      sl+=slideOf(d.gid,i); }});
+    return {n:n,done:done,f1:f1,f2:f2,val:val,slides:sl};
+  }
+  function buildPipe(){
+    var k=counts(), h='';
+    [['Production complete',k.done,1],['Feedback round 1 processed',k.f1,2],
+     ['Feedback round 2 processed',k.f2,3],['Validated by client',k.val,4]].forEach(function(r){
+      var pct=k.n? r[1]/k.n*100 : 0;
+      h+='<div class="card pstep"><div class="pstep-lab"><span class="pnum">'+r[2]+'</span>'+r[0]+'</div>'+
+         '<div class="pstep-val">'+r[1]+'<small>/ '+k.n+'</small></div>'+
+         '<div class="minibar"><i style="width:'+pct+'%"></i></div></div>';
+    });
+    document.getElementById('pipe').innerHTML=h;
+  }
+
+  /* ---------------- tiles ---------------- */
+  function tile(lab,pct,sub){
+    return '<div class="card tile"><div class="tile-lab">'+lab+'</div>'+
+      '<div class="tile-val">'+fmt(pct)+'<small>%</small></div>'+
+      '<div class="tile-sub">'+sub+'</div>'+
+      '<div class="minibar"><i style="width:'+pct+'%"></i></div></div>';
+  }
+  function buildTiles(){
+    var h='';
+    SEG.forEach(function(s){ var l=decks.filter(function(d){return d.seg===s;});
+      h+=tile(s+' banking', wavg(l), l.length+' decks · '+l.length*NCH+' chapters'); });
+    AUD.forEach(function(a){ var l=decks.filter(function(d){return d.aud===a;});
+      var sl=groups.filter(function(g){return g.aud===a;}).reduce(function(t,g){return t+groupSlides(g.id);},0);
+      h+=tile(a, wavg(l), l.length+' decks'+(sl?' · '+sl+' slides':'')); });
+    LANG.forEach(function(g){ var l=decks.filter(function(d){return d.lang===g;});
+      h+=tile(g, wavg(l), l.length+' decks'+(g===BASELANG?' · base':'')); });
+    document.getElementById('tiles').innerHTML=h;
+  }
+
+  /* ---------------- chapter table ---------------- */
+  function buildChap(){
+    var tb=document.getElementById('chapBody'); tb.innerHTML='';
+    for(var i=0;i<NCH;i++){
+      (function(i){
+        var p=chapWavg(i), f1=0,f2=0,v=0;
+        decks.forEach(function(d){ var c=cell(d.id,i); if(c.f1===2)f1++; if(c.f2===2)f2++; if(c.v)v++; });
+        var per=groups.map(function(g){ return slideOf(g.id,i); });
+        var uniq=per.filter(function(x,ix){ return per.indexOf(x)===ix; });
+        var slTxt = uniq.length===1 ? (uniq[0]||'—')
+                  : Math.min.apply(null,per)+'–'+Math.max.apply(null,per);
+        var tr=document.createElement('tr');
+        tr.innerHTML=
+          '<td><div class="cnum">Chapter '+(i+1)+'</div><div class="cname">'+chapShort(i)+'</div></td>'+
+          '<td><div class="cbar"><i style="width:'+p+'%"></i></div></td>'+
+          '<td class="n" style="font-weight:600">'+fmt(p)+'%</td>'+
+          '<td class="n">'+slTxt+'</td>'+
+          '<td class="n">'+f1+'/'+decks.length+'</td>'+
+          '<td class="n">'+f2+'/'+decks.length+'</td>'+
+          '<td class="n">'+v+'/'+decks.length+'</td>';
+        tb.appendChild(tr);
+      })(i);
+    }
+  }
+
+  /* ---------------- table view ---------------- */
+  function buildTable(){
+    var hd=document.getElementById('tvHead'); hd.innerHTML='';
+    var cols=['Segment','Audience','Language','Lang. weight'];
+    for(var i=0;i<NCH;i++) cols.push('Ch '+(i+1)+' %');
+    cols.push('Deck %','Slides','FB1','FB2','Validated');
+    cols.forEach(function(t,idx){ var th=document.createElement('th');
+      th.textContent=t; if(idx>2) th.className='n'; hd.appendChild(th); });
+    var tb=document.getElementById('tvBody'); tb.innerHTML='';
+    visDecks().forEach(function(d){
+      var tr=document.createElement('tr');
+      function td(t,n){ var e=document.createElement('td'); e.textContent=t; if(n) e.className='n'; tr.appendChild(e); }
+      td(d.seg+' banking'); td(d.aud); td(d.lang); td('×'+d.w,true);
+      var f1=0,f2=0,v=0;
+      for(var i=0;i<NCH;i++){ var c=cell(d.id,i); td(c.p+'%',true);
+        if(c.f1===2)f1++; if(c.f2===2)f2++; if(c.v)v++; }
+      td(fmt(deckPct(d))+'%',true); td(groupSlides(d.gid)||'—',true);
+      td(f1+'/'+NCH,true); td(f2+'/'+NCH,true); td(v+'/'+NCH,true);
+      tb.appendChild(tr);
+    });
+  }
+
+  /* ---------------- hero ---------------- */
+  function buildHero(){
+    var p=wavg(decks), k=counts();
+    document.getElementById('heroPct').textContent=fmt(p);
+    document.getElementById('heroBar').style.width=p+'%';
+    document.getElementById('doneCount').textContent=k.done;
+    document.getElementById('valCount').textContent=k.val;
+    document.getElementById('slideCount').textContent=k.slides||'—';
+    document.getElementById('updStamp').textContent=DATA.updated;
+    document.getElementById('wNote').textContent=BW;
+  }
+
+  function renderAll(){ buildHero(); buildPipe(); buildTiles(); buildBody(); buildChap(); buildTable(); }
+
+  /* ---------------- controls ---------------- */
+  function applyLock(){
+    var b=document.getElementById('lockBtn');
+    b.setAttribute('aria-pressed', locked?'true':'false');
+    b.innerHTML = locked ? '🔒 <span>Read-only</span>' : '🔓 <span>Editing on</span>';
+    document.getElementById('matrixNote').textContent = locked
+      ? 'read-only view'
+      : 'click a zone to set progress · click 1 / 2 / ✓ for feedback and validation · slide counts sit on the audience row';
+  }
+  document.getElementById('lockBtn').onclick=function(){ locked=!locked; applyLock(); renderAll(); };
+
+  function applySW(){
+    var b=document.getElementById('swBtn');
+    b.setAttribute('aria-pressed', SW?'true':'false');
+    b.innerHTML = SW ? '⚖ <span>Slide-weighted</span>' : '⚖ <span>Equal chapters</span>';
+    b.title = SW ? 'Chapters count in proportion to their slide count — click for equal chapters'
+                 : 'All five chapters count equally — click to weight by slide count';
+    document.getElementById('wNote2').textContent = SW
+      ? 'weighted by slide volume and base language — see the notes under Data'
+      : 'weighted by base language, all chapters equal — see the notes under Data';
+  }
+  document.getElementById('swBtn').onclick=function(){ SW=!SW; applySW(); renderAll(); };
+
+  document.getElementById('themeBtn').onclick=function(){
+    var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+    document.documentElement.setAttribute('data-theme', isDark?'light':'dark');
+    this.innerHTML = isDark ? '◐ <span>Dark</span>' : '◑ <span>Light</span>';
+  };
+
+  document.getElementById('tblBtn').onclick=function(){
+    var el=document.getElementById('tableview'), on=el.classList.toggle('show');
+    this.setAttribute('aria-pressed', on?'true':'false');
+  };
+
+  function download(name,content,type){
+    var blob=new Blob([content],{type:type});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },400);
+    dirty=false; document.getElementById('dirty').classList.remove('show');
+  }
+  function today(){ var d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function snapshot(lockIt){
+    var o=JSON.parse(JSON.stringify(DATA));
+    o.slides={}; groups.forEach(function(g){ o.slides[g.id]=slideRow(g.id).slice(); });
+    o.cells={};
+    decks.forEach(function(d){
+      o.cells[d.id]=[];
+      for(var i=0;i<NCH;i++){ var c=cell(d.id,i); o.cells[d.id].push({p:c.p,f1:c.f1,f2:c.f2,v:c.v}); }
+    });
+    o.updated=today(); o.locked=!!lockIt; o.slideWeighting=SW;
+    return o;
+  }
+  document.getElementById('dlJson').onclick=function(){
+    download('MyGuide-progress-'+today()+'.json', JSON.stringify(snapshot(false),null,2),'application/json');
+  };
+  document.getElementById('dlHtml').onclick=function(){
+    var node=document.getElementById('myguide-data'), keep=node.textContent;
+    node.textContent=JSON.stringify(snapshot(true),null,2);
+    var html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+    node.textContent=keep;
+    download('MyGuide-dashboard-'+today()+'.html', html,'text/html');
+  };
+  document.getElementById('upJson').onclick=function(){ document.getElementById('fileIn').click(); };
+  document.getElementById('fileIn').onchange=function(e){
+    var f=e.target.files[0]; if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var o=JSON.parse(r.result);
+        if(o.cells){
+          cells=o.cells; slides=o.slides||{}; DATA.updated=o.updated||DATA.updated;
+          if(typeof o.slideWeighting==='boolean'){ SW=o.slideWeighting; applySW(); }
+          dirty=false; document.getElementById('dirty').classList.remove('show'); renderAll();
+        } else alert('That file has no "cells" block — is it a MyGuide export?');
+      }catch(err){ alert('Could not read that file as valid JSON.'); }
+    };
+    r.readAsText(f); e.target.value='';
+  };
+  window.addEventListener('beforeunload',function(e){ if(dirty){ e.preventDefault(); e.returnValue=''; } });
+
+  /* ---------------- external data + iframe auto-height ---------------- */
+  function adoptSnapshot(o){
+    if(!o || !o.cells) return false;
+    cells  = o.cells;
+    slides = o.slides || {};
+    if(o.updated) DATA.updated = o.updated;
+    if(typeof o.slideWeighting==='boolean'){ SW=o.slideWeighting; applySW(); }
+    if(typeof o.baseWeight==='number' && o.baseWeight>0){
+      BW=o.baseWeight;
+      decks.forEach(function(d){ d.w = d.base ? BW : 1; });
+    }
+    return true;
+  }
+  function loadExternal(){
+    if(!DATAURL || !window.fetch) return;
+    fetch(DATAURL,{cache:'no-store'})
+      .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(o){
+        if(adoptSnapshot(o)){
+          renderAll();
+          document.getElementById('srcNote').textContent =
+            'Figures loaded from ' + DATAURL + ' · last updated ' + DATA.updated + '.';
+        }
+      })
+      .catch(function(){
+        /* no external file (or opened straight from disk) — the figures baked
+           into this file are used instead, which is the normal local case. */
+        if(EMBED) document.getElementById('srcNote').textContent =
+          'Figures baked into this page · last updated ' + DATA.updated + '.';
+      })
+      .then(reportHeight);
+  }
+
+  var lastH=0;
+  function reportHeight(){
+    if(!INFRAME) return;
+    var h=Math.ceil(document.documentElement.getBoundingClientRect().height);
+    if(h && Math.abs(h-lastH)>1){
+      lastH=h;
+      try{ window.parent.postMessage({myguide:'height', height:h}, '*'); }catch(e){}
+    }
+  }
+  if(INFRAME){
+    window.addEventListener('load', reportHeight);
+    window.addEventListener('resize', reportHeight);
+    if(window.ResizeObserver) new ResizeObserver(reportHeight).observe(document.body);
+    setInterval(reportHeight, 1000);
+  }
+
+  buildFilters(); buildHead(); applyLock(); applySW(); renderAll();
+  loadExternal(); reportHeight();
+})();
+</script>
+</body>
+</html>

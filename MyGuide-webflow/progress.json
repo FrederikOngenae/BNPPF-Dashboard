@@ -1,0 +1,444 @@
+{
+  "project": "MyGuide",
+  "updated": "2026-08-18",
+  "locked": true,
+  "baseWeight": 2,
+  "slideWeighting": true,
+  "chapters": [
+    "Welkom bij {tier} banking",
+    "Advies op maat",
+    "6 kernvragen",
+    "MyDebrief",
+    "Documentenbibliotheek"
+  ],
+  "segments": [
+    "Private",
+    "Priority"
+  ],
+  "audiences": [
+    "Individual",
+    "Professional"
+  ],
+  "languages": [
+    "NL",
+    "FR",
+    "EN"
+  ],
+  "baseLanguage": "NL",
+  "slides": {
+    "Individual|Private": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "Professional|Private": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "Individual|Priority": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "Professional|Priority": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "cells": {
+    "Individual|NL|Private": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Individual|FR|Private": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Individual|EN|Private": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Professional|NL|Private": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Professional|FR|Private": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Professional|EN|Private": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Individual|NL|Priority": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Individual|FR|Priority": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Individual|EN|Priority": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Professional|NL|Priority": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Professional|FR|Priority": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Professional|EN|Priority": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ]
+  }
+}
