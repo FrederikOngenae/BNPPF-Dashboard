@@ -9,7 +9,8 @@ doing it by hand.
 
   Progress sheet  60 rows: Segment, Audience, Language, Chapter,
                            Progress %, Feedback 1, Feedback 2, Validated
-  Slides sheet    20 rows: Segment, Audience, Chapter, Slides
+  Slides sheet    one row per segment x audience x chapter
+  Design sheet    one row per segment x audience: Segment, Audience, Status
 
 Environment:
   XLSX_URL        SharePoint "Anyone with the link" URL   (required)
@@ -161,6 +162,25 @@ def to_fb(v):
     return 0
 
 
+DP_STATES = ['not started', 'draft', 'submitted', 'approved']
+
+
+def to_dp(v):
+    if v is None or v == '':
+        return 0
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        n = int(v)
+        return n if 0 <= n < len(DP_STATES) else 0
+    n = norm(v)
+    if 'approv' in n or 'goedgekeurd' in n or n == '3':
+        return 3
+    if 'submit' in n or 'ingediend' in n or n == '2':
+        return 2
+    if 'draft' in n or 'ontwerp' in n or n == '1':
+        return 1
+    return 0
+
+
 def to_bool(v):
     if v is True:
         return True
@@ -302,8 +322,25 @@ def main():
             slides.setdefault('%s|%s' % (aud, seg), [0] * NCH)[ch - 1] = max(0, min(999, n))
             n_slides += 1
 
-    note('Matched %d/%d progress cells and %d/%d slide values.'
-         % (n_cells, expected_cells, n_slides, expected_slides))
+    design = {}
+    n_design = 0
+    expected_design = len(SEG) * len(AUD)
+    dws = pick_sheet(wb, 'Design', ['segment', 'audience', 'status'])
+    if dws is not None:
+        dheaders, drows = sheet_rows(dws)
+        dSeg = find_col(dheaders, 'segment')
+        dAud = find_col(dheaders, 'audience')
+        dSt  = find_col(dheaders, 'status', 'designproposal', 'design')
+        for row in drows:
+            seg = match(row.get(dSeg), SEG)
+            aud = match(row.get(dAud), AUD)
+            if not (seg and aud):
+                continue
+            design['%s|%s' % (aud, seg)] = to_dp(row.get(dSt)) if dSt else 0
+            n_design += 1
+
+    note('Matched %d/%d progress cells, %d/%d slide values and %d/%d design proposals.'
+         % (n_cells, expected_cells, n_slides, expected_slides, n_design, expected_design))
     for u in unmatched:
         print('  unmatched %s' % u)
 
@@ -330,6 +367,11 @@ def main():
     base['cells'] = cells
     if n_slides:
         base['slides'] = slides
+    if n_design:
+        for seg in SEG:
+            for aud in AUD:
+                design.setdefault('%s|%s' % (aud, seg), 0)
+        base['design'] = design
     base['locked'] = True
     base['updated'] = datetime.date.today().isoformat()
 
