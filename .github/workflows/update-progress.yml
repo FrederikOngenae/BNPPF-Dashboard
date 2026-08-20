@@ -81,3 +81,4 @@ jobs:
           git commit -m "Update progress figures from SharePoint workbook"
           git push
           echo "Committed updated figures." >> "$GITHUB_STEP_SUMMARY"
+
