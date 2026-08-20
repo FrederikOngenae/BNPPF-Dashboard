@@ -68,6 +68,7 @@
   }
   .chipbtn:hover{background:rgba(255,255,255,.22)}
   .chipbtn[aria-pressed="true"]{background:#fff;color:var(--brand);border-color:#fff;font-weight:600}
+  .chipbtn.warn{background:var(--review);color:#3d2a00;border-color:var(--review);font-weight:600}
 
   .hero{display:flex;align-items:flex-end;gap:34px;margin-top:24px;flex-wrap:wrap}
   .hero-fig{font-size:64px;line-height:.95;font-weight:600;letter-spacing:-.03em}
@@ -411,7 +412,7 @@
       <b>Editing here instead.</b> You can still click directly: zone <i>n</i> in a strip sets that chapter to <i>n</i>×10%, clicking the last filled zone steps back, and arrow keys work when a strip has focus. The <b>1</b> and <b>2</b> pips cycle <i>not started → in review → processed</i>; <b>✓</b> toggles client validation; slide counts sit on the shaded audience row. Bear in mind these edits are not written back to Excel, so the next import overwrites them.<br></span>
       <b>Weighting.</b> Every percentage on this page is a weighted average, not a plain one, so that "50% done" reflects effort rather than a count of ticked boxes. Two factors combine:<br>
       &nbsp;&nbsp;<b>1 · Base language.</b> The NL decks are built from scratch; FR and EN are derived from them. We estimate the base version takes roughly <span id="wNote">2</span>× as long, so an NL chapter carries twice the weight of the same chapter in FR or EN. That factor is an estimate — if the translation rounds turn out heavier or lighter than expected, change <code>baseWeight</code> in the <code>myguide-data</code> block and every figure recalculates.<br>
-      &nbsp;&nbsp;<b>2 · Slide volume.</b> With <i>Slide-weighted</i> on (top right), each chapter also counts in proportion to its slide count, so a 22-slide chapter moves the needle more than a 9-slide one. Switch it off to weight all five chapters equally. With no slide counts entered at all, this factor has no effect and averages fall back to equal chapters — but while you are <i>part-way</i> through entering them the percentages will look skewed, because chapters still on 0 slides carry no weight. Fill in all five, or work with <i>Equal chapters</i> on until you have.<br>
+      &nbsp;&nbsp;<b>2 · Slide volume.</b> With <i>Slide-weighted</i> on (top right), each chapter also counts in proportion to its slide count, so a 22-slide chapter moves the needle more than a 9-slide one. Switch it off to weight all five chapters equally. It only engages once <b>every</b> chapter of <b>every</b> segment and audience has a slide count — partial data would let the few filled-in chapters carry the whole figure, so until the Slides tab is complete the dashboard counts all chapters equally and the button turns amber to say so.<br>
       <span class="ednote"><b>Sharing with the client.</b> Click <i>Download dashboard</i> for a single standalone .html file with the current figures baked in and editing locked. Just send it — no server, no install. To publish to a web page instead, export <i>Cijfers</i> as <code>progress.json</code>, drop it next to this file on your host, and load the page with <code>?data=progress.json</code>.<br>
       <b>Chapter titles and weighting</b> live in the <code>myguide-data</code> block at the top of the file; <code>{tier}</code> resolves to Private or Priority. Colours come from the MyGuide PowerPoint theme (Accent 1 <code>#004c45</code>, Dark 2 <code>#017f50</code>).</span>
       <span id="srcNote"></span>
@@ -504,12 +505,26 @@
      language, since the three languages share one proposal. Deck rows leave it
      out so a deck total means that deck's own chapters; every roll-up above
      deck level includes it.                                                  */
+  /* Slide weighting is only meaningful once every chapter of every group has a
+     slide count. With partial data the chapters that are still on 0 carry no
+     weight at all, which lets a handful of filled-in cells — or the design
+     proposals, whose weight is a fixed slide-equivalent — dominate the whole
+     figure. So it engages all-or-nothing, and falls back to equal chapters. */
+  var SLIDES_OK=false;
+  function slidesComplete(){
+    for(var gi=0; gi<groups.length; gi++){
+      var row=slideRow(groups[gi].id);
+      for(var i=0;i<NCH;i++) if(!(row[i]>0)) return false;
+    }
+    return true;
+  }
   function agg(list, chaps, withDP){
+    var useSlides = SW && SLIDES_OK;
     var chDen=0;
     list.forEach(function(d){ chaps.forEach(function(i){
-      chDen += d.w * (SW ? slideOf(d.gid,i) : 1);
+      chDen += d.w * (useSlides ? slideOf(d.gid,i) : 1);
     });});
-    var useSlides = SW && chDen>0;
+    if(useSlides && chDen<=0) useSlides=false;
 
     var num=0, den=0;
     list.forEach(function(d){ chaps.forEach(function(i){
@@ -518,10 +533,15 @@
     });});
 
     if(withDP){
-      var gids={}; list.forEach(function(d){ gids[d.gid]=1; });
+      /* A design proposal belongs to a whole group, not to any one language, so
+         it only counts when the slice covers every language of that group.
+         Without this a single-language view (the NL / FR / EN tiles) would carry
+         all six proposals against only its own third of the chapter weight, and
+         FR would read higher than NL at identical progress. */
+      var seen={}; list.forEach(function(d){ seen[d.gid]=(seen[d.gid]||0)+1; });
       var dw = useSlides ? DP_SLIDES : 1;
-      if(dw>0) Object.keys(gids).forEach(function(gid){
-        num += DP_PCT[dstate(gid)] * dw; den += dw;
+      if(dw>0) Object.keys(seen).forEach(function(gid){
+        if(seen[gid]===LANG.length){ num += DP_PCT[dstate(gid)] * dw; den += dw; }
       });
     }
     return den? num/den : 0;
@@ -867,7 +887,11 @@
     document.getElementById('wNote').textContent=BW;
   }
 
-  function renderAll(){ buildHero(); buildPipe(); buildTiles(); buildBody(); buildChap(); buildTable(); }
+  function renderAll(){
+    SLIDES_OK = slidesComplete();
+    buildHero(); buildPipe(); buildTiles(); buildBody(); buildChap(); buildTable();
+    applySW();
+  }
 
   /* ---------------- controls ---------------- */
   function applyLock(){
@@ -882,13 +906,21 @@
 
   function applySW(){
     var b=document.getElementById('swBtn');
+    var stalled = SW && !SLIDES_OK;      /* asked for slide weighting, data won't support it */
     b.setAttribute('aria-pressed', SW?'true':'false');
-    b.innerHTML = SW ? '⚖ <span>Slide-weighted</span>' : '⚖ <span>Equal chapters</span>';
-    b.title = SW ? 'Chapters count in proportion to their slide count — click for equal chapters'
-                 : 'All five chapters count equally — click to weight by slide count';
-    document.getElementById('wNote2').textContent = SW
-      ? 'weighted by slide volume and base language — see the notes under Data'
-      : 'weighted by base language, all chapters equal — see the notes under Data';
+    b.classList.toggle('warn', stalled);
+    b.innerHTML = stalled ? '⚠ <span>Slide counts incomplete</span>'
+                : SW      ? '⚖ <span>Slide-weighted</span>'
+                          : '⚖ <span>Equal chapters</span>';
+    b.title = stalled
+      ? 'Slide weighting is switched on but some chapters have no slide count, so every chapter '
+        + 'is being counted equally instead. Fill in the Slides tab to enable it.'
+      : SW ? 'Chapters count in proportion to their slide count — click for equal chapters'
+           : 'All five chapters count equally — click to weight by slide count';
+    document.getElementById('wNote2').textContent = stalled
+      ? 'slide counts incomplete — falling back to equal chapters, weighted by base language'
+      : SW ? 'weighted by slide volume and base language — see the notes under Data'
+           : 'weighted by base language, all chapters equal — see the notes under Data';
   }
   document.getElementById('swBtn').onclick=function(){ SW=!SW; applySW(); renderAll(); };
 
@@ -1254,7 +1286,18 @@
             ' Now click <i>Export figures (.json)</i> and upload the result as <code>progress.json</code>.';
     if(bad.length) msg+='<ul><li>'+bad.join('</li><li>')+'</li></ul>';
     if(nP<decks.length*NCH) msg+='<div style="margin-top:5px">Rows that did not import were set to 0%.</div>';
-    showImport(msg, bad.length>0);
+
+    /* An all-zero import nearly always means the Progress % column was blank or
+       renamed, not that the project really is at zero. Say so before it gets
+       exported and published over good figures. */
+    var nz=0;
+    decks.forEach(function(d){ for(var i2=0;i2<NCH;i2++) if(cell(d.id,i2).p>0) nz++; });
+    var warn = nz===0;
+    if(warn) msg='<b>Imported '+nP+' rows, but every chapter came through at 0%.</b> '+
+      'That usually means the <i>Progress %</i> column is blank or has been renamed — the importer '+
+      'looks for a header starting with "Progress". Check the workbook before exporting, or you will '+
+      'publish an empty dashboard.'+(bad.length?'<ul><li>'+bad.join('</li><li>')+'</li></ul>':'');
+    showImport(msg, warn || bad.length>0);
   }
   document.getElementById('upXlsx').onclick=function(){ document.getElementById('xlsxIn').click(); };
   document.getElementById('xlsxIn').onchange=function(e){
