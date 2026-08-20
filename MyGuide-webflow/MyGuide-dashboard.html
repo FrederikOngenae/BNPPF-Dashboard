@@ -224,6 +224,13 @@
   .dirty{font-size:12.5px;color:var(--taupe);display:none;align-items:center;gap:6px}
   .dirty.show{display:inline-flex}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--review);flex:none}
+  #impMsg{margin-top:11px;font-size:12.5px;line-height:1.55}
+  #impMsg .box{border:1px solid var(--border);border-left:3px solid var(--fill);
+               border-radius:6px;padding:9px 13px;background:var(--surface);display:inline-block;max-width:78ch}
+  #impMsg .box.bad{border-left-color:var(--review)}
+  #impMsg b{color:var(--ink)}
+  #impMsg ul{margin:5px 0 0;padding-left:18px}
+  #impMsg li{margin:1px 0}
 
   #tableview{display:none;margin-top:14px;padding:4px 0 8px;overflow-x:auto}
   #tableview.show{display:block}
@@ -242,6 +249,7 @@
   html.embed .wrap{padding-bottom:34px}
   html.embed #lockBtn,
   html.embed #dlHtml, html.embed #dlJson, html.embed #upJson, html.embed #fileIn,
+  html.embed #upXlsx, html.embed #xlsxIn, html.embed #impMsg,
   html.embed .dirty,
   html.embed .ednote{display:none !important}
   html.embed #dataSec .sec-head{display:none}
@@ -360,13 +368,16 @@
   <section id="dataSec">
     <div class="sec-head"><h2>Data</h2></div>
     <div class="actions">
-      <button class="btn primary" id="dlHtml">⤓ Download dashboard (.html)</button>
-      <button class="btn" id="dlJson">⤓ Export figures (.json)</button>
-      <button class="btn" id="upJson">⤒ Import figures</button>
+      <button class="btn primary" id="upXlsx">⤒ Import from Excel (.xlsx)</button>
+      <input type="file" id="xlsxIn" accept=".xlsx,.xlsm" hidden>
+      <button class="btn primary" id="dlJson">⤓ Export figures (.json)</button>
+      <button class="btn" id="dlHtml">⤓ Download dashboard (.html)</button>
+      <button class="btn" id="upJson">⤒ Import figures (.json)</button>
       <input type="file" id="fileIn" accept=".json,application/json" hidden>
       <button class="btn" id="tblBtn" aria-pressed="false">☰ Table view</button>
       <span class="dirty" id="dirty"><span class="dot"></span> unsaved changes</span>
     </div>
+    <div id="impMsg"></div>
     <div class="card" id="tableview">
       <table>
         <thead><tr id="tvHead"></tr></thead>
@@ -374,8 +385,8 @@
       </table>
     </div>
     <p class="foot">
-      <span class="ednote"><b>How to update.</b> Click zone <i>n</i> in a strip to set that chapter to <i>n</i>×10%; click the last filled zone to step back. Arrow keys work when a strip has focus. The <b>1</b> and <b>2</b> pips cycle <i>not started → in review → processed</i>; <b>✓</b> toggles client validation.<br>
-      <b>Slide counts</b> live on the shaded audience row and apply to all three languages of that audience and segment — enter them once.<br></span>
+      <span class="ednote"><b>The Excel workbook is the master record.</b> Keep <code>MyGuide-progress.xlsx</code> up to date in SharePoint, then here: <i>Import from Excel</i> → <i>Export figures (.json)</i> → upload the result as <code>progress.json</code>. The importer reads the <b>Progress</b> sheet (60 rows) and the <b>Slides</b> sheet (20 rows), matching columns by header name, so extra columns or a different column order are fine.<br>
+      <b>Editing here instead.</b> You can still click directly: zone <i>n</i> in a strip sets that chapter to <i>n</i>×10%, clicking the last filled zone steps back, and arrow keys work when a strip has focus. The <b>1</b> and <b>2</b> pips cycle <i>not started → in review → processed</i>; <b>✓</b> toggles client validation; slide counts sit on the shaded audience row. Bear in mind these edits are not written back to Excel, so the next import overwrites them.<br></span>
       <b>Weighting.</b> Every percentage on this page is a weighted average, not a plain one, so that "50% done" reflects effort rather than a count of ticked boxes. Two factors combine:<br>
       &nbsp;&nbsp;<b>1 · Base language.</b> The NL decks are built from scratch; FR and EN are derived from them. We estimate the base version takes roughly <span id="wNote">2</span>× as long, so an NL chapter carries twice the weight of the same chapter in FR or EN. That factor is an estimate — if the translation rounds turn out heavier or lighter than expected, change <code>baseWeight</code> in the <code>myguide-data</code> block and every figure recalculates.<br>
       &nbsp;&nbsp;<b>2 · Slide volume.</b> With <i>Slide-weighted</i> on (top right), each chapter also counts in proportion to its slide count, so a 22-slide chapter moves the needle more than a 9-slide one. Switch it off to weight all five chapters equally. With no slide counts entered at all, this factor has no effect and averages fall back to equal chapters — but while you are <i>part-way</i> through entering them the percentages will look skewed, because chapters still on 0 slides carry no weight. Fill in all five, or work with <i>Equal chapters</i> on until you have.<br>
@@ -813,6 +824,312 @@
     node.textContent=keep;
     download('MyGuide-dashboard-'+today()+'.html', html,'text/html');
   };
+  /* ---------------- import from Excel ----------------
+     The SharePoint workbook is the master record. Two sheets are read:
+       Progress — 60 rows: Segment, Audience, Language, Chapter, Progress %,
+                  Feedback 1, Feedback 2, Validated
+       Slides   — 20 rows: Segment, Audience, Chapter, Slides
+     Columns are matched by header name, so extra columns and reordering are
+     fine; only the names matter. SheetJS is fetched on first use rather than
+     bundled, so the dashboard stays a single small file.                    */
+  /* --- minimal .xlsx reader ------------------------------------------
+     An .xlsx is a ZIP of XML. Rather than pull in a 400 KB library from a
+     CDN — which a corporate network may well block, and which would bloat
+     the hosted copy for every visitor — we read the archive directly using
+     the browser's own DecompressionStream and DOMParser. A few KB, no
+     network, works offline.                                             */
+  function utf8(bytes){
+    return (typeof TextDecoder!=='undefined') ? new TextDecoder('utf-8').decode(bytes)
+         : decodeURIComponent(escape(String.fromCharCode.apply(null,bytes)));
+  }
+  function inflateRaw(bytes){
+    if(typeof DecompressionStream==='undefined')
+      return Promise.reject(new Error('This browser cannot unzip files. Use Chrome, Edge, Firefox or Safari 16.4+.'));
+    var ds=new DecompressionStream('deflate-raw');
+    var w=ds.writable.getWriter(); w.write(bytes); w.close();
+    return new Response(ds.readable).arrayBuffer().then(function(ab){ return new Uint8Array(ab); });
+  }
+  function unzip(u8){
+    var dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength), eocd=-1;
+    for(var i=u8.length-22;i>=Math.max(0,u8.length-66000);i--){
+      if(u8[i]===0x50&&u8[i+1]===0x4b&&u8[i+2]===0x05&&u8[i+3]===0x06){ eocd=i; break; }
+    }
+    if(eocd<0) throw new Error('This does not look like an .xlsx file.');
+    var count=dv.getUint16(eocd+10,true), p=dv.getUint32(eocd+16,true), map={};
+    for(var n=0;n<count;n++){
+      if(dv.getUint32(p,true)!==0x02014b50) break;
+      var method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true);
+      var fnLen=dv.getUint16(p+28,true), exLen=dv.getUint16(p+30,true), cmLen=dv.getUint16(p+32,true);
+      var lho=dv.getUint32(p+42,true);
+      map[utf8(u8.subarray(p+46,p+46+fnLen))]={method:method,csize:csize,lho:lho};
+      p+=46+fnLen+exLen+cmLen;
+    }
+    return {
+      has:function(name){ return !!map[name]; },
+      names:function(){ return Object.keys(map); },
+      text:function(name){
+        var e=map[name]; if(!e) return Promise.resolve(null);
+        var fnLen=dv.getUint16(e.lho+26,true), exLen=dv.getUint16(e.lho+28,true);
+        var start=e.lho+30+fnLen+exLen;
+        var data=u8.subarray(start,start+e.csize);
+        if(e.method===0) return Promise.resolve(utf8(data));
+        return inflateRaw(data).then(utf8);
+      }
+    };
+  }
+  function xml(s){ return new DOMParser().parseFromString(s,'application/xml'); }
+  function colIndex(ref){
+    var n=0;
+    for(var i=0;i<ref.length;i++){
+      var ch=ref.charCodeAt(i);
+      if(ch<65||ch>90) break;
+      n=n*26+(ch-64);
+    }
+    return n-1;
+  }
+  /* returns { names:[sheetName], rows:{ sheetName:[ {header:value} ] } } */
+  function readXlsx(u8){
+    var z=unzip(u8), shared=[], sheets=[];
+    return Promise.resolve()
+      .then(function(){ return z.text('xl/sharedStrings.xml'); })
+      .then(function(s){
+        if(s){
+          var si=xml(s).getElementsByTagName('si');
+          for(var i=0;i<si.length;i++){
+            var t=si[i].getElementsByTagName('t'), buf='';
+            for(var j=0;j<t.length;j++) buf+=t[j].textContent;
+            shared.push(buf);
+          }
+        }
+        return z.text('xl/_rels/workbook.xml.rels');
+      })
+      .then(function(relsTxt){
+        var rels={};
+        if(relsTxt){
+          var rs=xml(relsTxt).getElementsByTagName('Relationship');
+          for(var i=0;i<rs.length;i++){
+            var tgt=rs[i].getAttribute('Target')||'';
+            if(tgt.charAt(0)!=='/' && tgt.indexOf('xl/')!==0) tgt='xl/'+tgt.replace(/^\.\//,'');
+            rels[rs[i].getAttribute('Id')]=tgt.replace(/^\//,'');
+          }
+        }
+        return z.text('xl/workbook.xml').then(function(wbTxt){
+          if(!wbTxt) throw new Error('This does not look like an .xlsx workbook.');
+          var ns=xml(wbTxt).getElementsByTagName('sheet');
+          for(var i=0;i<ns.length;i++){
+            var rid=ns[i].getAttribute('r:id')||ns[i].getAttributeNS
+                    &&ns[i].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+            var path=rels[rid] || ('xl/worksheets/sheet'+(i+1)+'.xml');
+            if(!z.has(path)) path='xl/worksheets/sheet'+(i+1)+'.xml';
+            sheets.push({name:ns[i].getAttribute('name'), path:path});
+          }
+        });
+      })
+      .then(function(){
+        var out={names:sheets.map(function(s){return s.name;}), rows:{}};
+        return sheets.reduce(function(chain,sh){
+          return chain.then(function(){
+            return z.text(sh.path).then(function(txt){
+              out.rows[sh.name]=[];
+              if(!txt) return;
+              var grid=[], rs=xml(txt).getElementsByTagName('row');
+              for(var i=0;i<rs.length;i++){
+                var cs=rs[i].getElementsByTagName('c'), line=[];
+                for(var j=0;j<cs.length;j++){
+                  var c=cs[j], ref=c.getAttribute('r')||'', t=c.getAttribute('t');
+                  var idx = ref? colIndex(ref) : j, val=null;
+                  if(t==='inlineStr'){
+                    var is=c.getElementsByTagName('t'), s2='';
+                    for(var k=0;k<is.length;k++) s2+=is[k].textContent;
+                    val=s2;
+                  } else {
+                    var v=c.getElementsByTagName('v')[0];
+                    if(v){
+                      if(t==='s') val=shared[parseInt(v.textContent,10)];
+                      else if(t==='b') val=(v.textContent==='1');
+                      else if(t==='str'||t==='e') val=v.textContent;
+                      else { var num=parseFloat(v.textContent); val=isNaN(num)? v.textContent : num; }
+                    }
+                  }
+                  line[idx]=(val==null?'':val);
+                }
+                grid.push(line);
+              }
+              if(grid.length<2) return;
+              var head=grid[0].map(function(h){ return String(h==null?'':h).trim(); });
+              for(var r2=1;r2<grid.length;r2++){
+                var obj={}, any=false;
+                for(var c2=0;c2<head.length;c2++){
+                  if(!head[c2]) continue;
+                  var cellv=grid[r2][c2]; if(cellv===undefined) cellv='';
+                  obj[head[c2]]=cellv;
+                  if(cellv!=='') any=true;
+                }
+                if(any) out.rows[sh.name]=out.rows[sh.name].concat([obj]);
+              }
+            });
+          });
+        }, Promise.resolve()).then(function(){ return out; });
+      });
+  }
+
+  function norm(v){ return String(v==null?'':v).toLowerCase().replace(/[^a-z0-9]/g,''); }
+  function matchOne(v,list){
+    var n=norm(v);
+    for(var i=0;i<list.length;i++) if(norm(list[i])===n) return list[i];
+    return null;
+  }
+  function toPct(v){
+    if(v==null||v==='') return null;
+    var n = (typeof v==='number') ? v : parseFloat(String(v).replace('%','').replace(',','.'));
+    if(isNaN(n)) return null;
+    if(n>0 && n<=1) n*=100;              /* a cell formatted as 80% arrives as 0.8 */
+    n=Math.round(n/10)*10;
+    return Math.max(0,Math.min(100,n));
+  }
+  function toFb(v){
+    if(v==null||v==='') return 0;
+    if(typeof v==='number') return (v===1||v===2)? v : 0;
+    var n=norm(v);
+    if(n.indexOf('process')>-1||n==='done'||n==='2'||n.indexOf('verwerkt')>-1) return 2;
+    if(n.indexOf('review')>-1||n==='1'||n.indexOf('nazicht')>-1||n.indexOf('lopend')>-1) return 1;
+    return 0;
+  }
+  function toBool(v){
+    if(v===true) return true;
+    if(typeof v==='number') return v===1;
+    var n=norm(v);
+    return n==='yes'||n==='y'||n==='true'||n==='x'||n==='1'||n==='ja'||n==='oui';
+  }
+  function headerMap(row){
+    var m={};
+    Object.keys(row).forEach(function(k){ m[norm(k)]=k; });
+    return function(){
+      for(var i=0;i<arguments.length;i++){
+        var want=norm(arguments[i]);
+        if(m[want]) return m[want];
+        for(var key in m) if(key.indexOf(want)===0) return m[key];
+      }
+      return null;
+    };
+  }
+  function pickSheet(wb,name,needed){
+    var exact=wb.names.filter(function(s){ return norm(s)===norm(name) && (wb.rows[s]||[]).length; });
+    if(exact.length) return exact[0];
+    for(var i=0;i<wb.names.length;i++){
+      var rows=wb.rows[wb.names[i]]||[];
+      if(!rows.length) continue;
+      var get=headerMap(rows[0]);
+      if(needed.every(function(c){ return !!get(c); })) return wb.names[i];
+    }
+    return null;
+  }
+  function showImport(html,bad){
+    document.getElementById('impMsg').innerHTML='<div class="box'+(bad?' bad':'')+'">'+html+'</div>';
+  }
+  function importWorkbook(wb){
+    var pName=pickSheet(wb,'Progress',['segment','audience','language','chapter']);
+    var sName=pickSheet(wb,'Slides',['segment','audience','chapter','slides']);
+    if(!pName){
+      showImport('<b>No Progress sheet found.</b> The workbook needs a sheet with Segment, Audience, '+
+                 'Language and Chapter columns. Sheets seen: '+wb.names.join(', ')+'.',true);
+      return;
+    }
+    var nP=0,nS=0,bad=[];
+    var newCells={}, newSlides={};
+
+    var prows=wb.rows[pName]||[];
+    if(prows.length){
+      var g=headerMap(prows[0]);
+      var cSeg=g('segment'), cAud=g('audience'), cLang=g('language'), cCh=g('chapter'),
+          cP=g('progress','progress%','percent'), cF1=g('feedback1','fb1'),
+          cF2=g('feedback2','fb2'), cV=g('validated','validation');
+      prows.forEach(function(row,ix){
+        var seg=matchOne(row[cSeg],SEG), aud=matchOne(row[cAud],AUD), lang=matchOne(row[cLang],LANG);
+        var ch=parseInt(row[cCh],10);
+        if(!seg||!aud||!lang||!(ch>=1&&ch<=NCH)){
+          /* Only complain about rows that were clearly meant to be data. A note or
+             blank spacer under the table has nothing in the language/chapter cells,
+             so it is skipped in silence rather than reported as an error.        */
+          var looksLikeData = String(row[cSeg]||'').trim()!=='' &&
+                              (String(row[cLang]||'').trim()!=='' || String(row[cCh]||'').trim()!=='');
+          if(looksLikeData && bad.length<6)
+            bad.push('Progress row '+(ix+2)+': could not match "'+
+                     [row[cSeg],row[cAud],row[cLang],row[cCh]].join(' / ')+'"');
+          return;
+        }
+        var id=aud+'|'+lang+'|'+seg, i=ch-1;
+        if(!newCells[id]) newCells[id]=[];
+        var p=cP? toPct(row[cP]) : null;
+        newCells[id][i]={ p: p==null?0:p,
+                          f1: cF1? toFb(row[cF1]) : 0,
+                          f2: cF2? toFb(row[cF2]) : 0,
+                          v:  cV ? toBool(row[cV]) : false };
+        nP++;
+      });
+    }
+
+    if(sName){
+      var srows=wb.rows[sName]||[];
+      if(srows.length){
+        var gs=headerMap(srows[0]);
+        var sSeg=gs('segment'), sAud=gs('audience'), sCh=gs('chapter'), sSl=gs('slides','slide');
+        srows.forEach(function(row,ix){
+          var seg=matchOne(row[sSeg],SEG), aud=matchOne(row[sAud],AUD);
+          var ch=parseInt(row[sCh],10);
+          if(!seg||!aud||!(ch>=1&&ch<=NCH)) return;
+          var n=parseInt(row[sSl],10); if(isNaN(n)) n=0;
+          var gid=aud+'|'+seg;
+          if(!newSlides[gid]) newSlides[gid]=new Array(NCH).fill(0);
+          newSlides[gid][ch-1]=Math.max(0,Math.min(999,n));
+          nS++;
+        });
+      }
+    }
+
+    if(!nP){
+      showImport('<b>Nothing imported.</b> The Progress sheet was found but no row matched a known deck. '+
+                 'Check that Segment reads Private/Priority, Audience reads Individual/Professional and '+
+                 'Language reads NL/FR/EN.',true);
+      return;
+    }
+
+    /* fill any gaps so a partial workbook does not leave stale values behind */
+    decks.forEach(function(d){
+      if(!newCells[d.id]) newCells[d.id]=[];
+      for(var i=0;i<NCH;i++) if(!newCells[d.id][i]) newCells[d.id][i]={p:0,f1:0,f2:0,v:false};
+    });
+    cells=newCells;
+    if(nS) { groups.forEach(function(g){ if(!newSlides[g.id]) newSlides[g.id]=new Array(NCH).fill(0); });
+             slides=newSlides; }
+    touch(); renderAll();
+
+    var msg='<b>Imported '+nP+' of '+(decks.length*NCH)+' progress rows</b>'+
+            (nS? ' and '+nS+' slide values.' : '. No Slides sheet found — slide counts left as they were.')+
+            ' Now click <i>Export figures (.json)</i> and upload the result as <code>progress.json</code>.';
+    if(bad.length) msg+='<ul><li>'+bad.join('</li><li>')+'</li></ul>';
+    if(nP<decks.length*NCH) msg+='<div style="margin-top:5px">Rows that did not import were set to 0%.</div>';
+    showImport(msg, bad.length>0);
+  }
+  document.getElementById('upXlsx').onclick=function(){ document.getElementById('xlsxIn').click(); };
+  document.getElementById('xlsxIn').onchange=function(e){
+    var f=e.target.files[0]; e.target.value=''; if(!f) return;
+    showImport('Reading <b>'+f.name+'</b>…');
+    var r=new FileReader();
+    r.onerror=function(){ showImport('<b>Could not open that file.</b> If it lives in SharePoint, make sure it '+
+      'has finished syncing and is available offline rather than a cloud-only placeholder.',true); };
+    r.onload=function(){
+      readXlsx(new Uint8Array(r.result))
+        .then(importWorkbook)
+        .catch(function(err){
+          showImport('<b>Could not read that workbook.</b> '+((err&&err.message)||'')+
+                     ' It must be a real .xlsx saved from Excel — not a .csv, an .xls, or a shortcut to an '+
+                     'online file.',true);
+        });
+    };
+    r.readAsArrayBuffer(f);
+  };
+
   document.getElementById('upJson').onclick=function(){ document.getElementById('fileIn').click(); };
   document.getElementById('fileIn').onchange=function(e){
     var f=e.target.files[0]; if(!f) return;

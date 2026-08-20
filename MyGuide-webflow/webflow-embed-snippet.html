@@ -1,20 +1,27 @@
 <!-- ══════════════════════════════════════════════════════════════════════
      MyGuide progress dashboard — Webflow Code Embed
      ─────────────────────────────────────────────────────────────────────
-     1. Replace BOTH occurrences of https://YOUR-SITE.example.com with the
-        origin where you uploaded MyGuide-dashboard.html + progress.json.
-        No trailing slash on the ORIGIN constant.
-     2. Paste this whole block into a Webflow "Code embed" element.
-        Do NOT add <html>, <head> or <body> tags around it — Webflow
-        rejects those.
-     3. The embed renders blank on the Designer canvas. Use Preview (or
-        Publish) to see it.
+     URLs are already set for FrederikOngenae/BNPPF-Dashboard via GitHub
+     Pages. Paste this whole block into a Webflow "Code embed" element —
+     nothing to replace.
+
+     Prerequisite: GitHub Pages must be switched on for the repo
+     (Settings → Pages → Deploy from a branch → main → / (root)).
+     Confirm this loads in a normal browser tab first:
+     https://frederikongenae.github.io/BNPPF-Dashboard/MyGuide-webflow/MyGuide-dashboard.html
+
+     Do NOT wrap this in <html>, <head> or <body> tags — Webflow rejects
+     those. The embed renders blank on the Designer canvas; use Preview
+     or publish to see it.
+
+     If you later move the files to the repo root, delete "MyGuide-webflow/"
+     from the src below. ORIGIN never changes.
      ══════════════════════════════════════════════════════════════════ -->
 
 <div class="myguide-embed" style="width:100%;max-width:1440px;margin:0 auto">
   <iframe
     id="myguide-frame"
-    src="https://YOUR-SITE.example.com/MyGuide-dashboard.html?embed=1&amp;data=progress.json"
+    src="https://frederikongenae.github.io/BNPPF-Dashboard/MyGuide-webflow/MyGuide-dashboard.html?embed=1&amp;data=progress.json"
     title="MyGuide production progress dashboard"
     loading="lazy"
     scrolling="no"
@@ -23,14 +30,14 @@
 
 <script>
 (function () {
-  // Must exactly match the origin of the iframe src above (scheme + host, no path).
-  var ORIGIN = "https://YOUR-SITE.example.com";
+  // Scheme + host only. No repo name, no path, no trailing slash.
+  var ORIGIN = "https://frederikongenae.github.io";
 
   var frame = document.getElementById("myguide-frame");
   if (!frame) return;
 
-  // The dashboard posts its rendered height whenever it changes, so the
-  // iframe grows to fit and the page never shows a scrollbar inside a scrollbar.
+  // The dashboard posts its rendered height whenever it changes, so the iframe
+  // grows to fit and you never get a scrollbar inside a scrollbar.
   window.addEventListener("message", function (e) {
     if (e.origin !== ORIGIN) return;
     var d = e.data;

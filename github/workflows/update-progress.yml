@@ -1,0 +1,55 @@
+name: Update progress.json from SharePoint
+
+# Reads MyGuide-progress.xlsx from its SharePoint share link, regenerates
+# MyGuide-webflow/progress.json and commits it only when the figures changed.
+# GitHub Pages then republishes automatically.
+
+on:
+  schedule:
+    # Every 15 minutes. GitHub queues scheduled runs and may delay them under
+    # load, so treat this as "within about 15 minutes", not to the second.
+    - cron: '*/15 * * * *'
+  # Lets you force a run from the Actions tab without waiting for the schedule.
+  workflow_dispatch:
+
+# Only one sync at a time; a queued run supersedes an older waiting one.
+concurrency:
+  group: update-progress
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install openpyxl
+        run: pip install --quiet openpyxl
+
+      - name: Convert the workbook to progress.json
+        env:
+          XLSX_URL: ${{ secrets.XLSX_URL }}
+          OUT: MyGuide-webflow/progress.json
+        run: python scripts/xlsx_to_json.py
+
+      - name: Commit if the figures changed
+        run: |
+          if [[ -z "$(git status --porcelain MyGuide-webflow/progress.json)" ]]; then
+            echo "No change — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add MyGuide-webflow/progress.json
+          git commit -m "Update progress figures from SharePoint workbook"
+          git push
+          echo "Committed updated figures."
