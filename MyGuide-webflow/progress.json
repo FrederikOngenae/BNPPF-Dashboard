@@ -33,7 +33,7 @@
   ],
   "baseLanguage": "NL",
   "design": {
-    "Individual|Private": 0,
+    "Individual|Private": 2,
     "Professional|Private": 0,
     "Individual|Priority": 0,
     "Professional|Priority": 0,
