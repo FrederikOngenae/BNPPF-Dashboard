@@ -341,12 +341,39 @@ def main():
 
     note('Matched %d/%d progress cells, %d/%d slide values and %d/%d design proposals.'
          % (n_cells, expected_cells, n_slides, expected_slides, n_design, expected_design))
+
+    # Print what was actually read, so wrong-looking data is visible in the run log
+    # rather than only showing up as a strange percentage on the published page.
+    nz = sum(1 for v in cells.values() for c in v if c and c.get('p'))
+    print('  progress: %d of %d chapters are above 0%%' % (nz, n_cells))
+    if slides:
+        for gid in sorted(slides):
+            print('  slides %-38s %s  (total %d)' % (gid, slides[gid], sum(slides[gid])))
+        distinct = {tuple(v) for v in slides.values()}
+        if len(distinct) == 1 and len(slides) > 1:
+            print('  NOTE: every segment/audience has identical slide counts. That is '
+                  'possible, but check the Slides tab is filled per group and not just '
+                  'copied down.')
     for u in unmatched:
         print('  unmatched %s' % u)
 
     if n_cells == 0:
         die('No row matched a known deck. Check that Segment reads %s, Audience reads %s '
             'and Language reads %s.' % ('/'.join(SEG), '/'.join(AUD), '/'.join(LANG)))
+    # An all-zero import is almost always a mapping problem rather than a real
+    # state: the rows matched, but the Progress % column was blank, renamed or
+    # read from the wrong sheet. Publishing it silently wipes the client's view.
+    n_nonzero = sum(1 for v in cells.values() for c in v if c and c.get('p'))
+    if n_cells and n_nonzero == 0 and os.environ.get('ALLOW_ZERO', '') != '1':
+        die('All %d progress rows matched, but every one of them is 0%%. That is nearly '
+            'always a column problem rather than a genuinely empty project:\n'
+            '  - the Progress %% column is blank in the workbook, or\n'
+            '  - it has been renamed (the importer looks for a header starting with '
+            '"Progress"), or\n'
+            '  - a second sheet with the right headers but no data is being read instead.\n'
+            'Refusing to publish, because this would blank the published dashboard. '
+            'Set ALLOW_ZERO=1 if the project really is at zero.' % n_cells)
+
     if n_cells < expected_cells and not ALLOW_PARTIAL:
         die('Only %d of %d progress cells matched. Refusing to publish, because the '
             'missing chapters would be written as 0%%. Fix the workbook, or set '
