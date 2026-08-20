@@ -50,28 +50,71 @@ def note(msg):
             pass
 
 
+def _variants(url):
+    """SharePoint share links come in several shapes and only some of them
+    return the file itself rather than the Office web viewer. Try the known
+    forms in order; the first one that yields a real .xlsx wins."""
+    base = url.split('#')[0]
+    seen, out = set(), []
+
+    def add(u):
+        if u and u not in seen:
+            seen.add(u)
+            out.append(u)
+
+    # 1. the link as given, asking for the bytes rather than the viewer
+    add(base + ('&' if '?' in base else '?') + 'download=1')
+    # 2. same, with any tracking query dropped
+    stem = base.split('?')[0]
+    add(stem + '?download=1')
+    # 3. the site's download.aspx, derived from a /:x:/s/<site>/<token> link
+    m = re.match(r'^(https?://[^/]+)/:[a-z]:/[a-z]/([^/]+)/([^/?]+)', base, re.I)
+    if m:
+        host, site, token = m.group(1), m.group(2), m.group(3)
+        add('%s/sites/%s/_layouts/15/download.aspx?share=%s' % (host, site, token))
+        add('%s/teams/%s/_layouts/15/download.aspx?share=%s' % (host, site, token))
+    return out
+
+
 def download(url):
-    """SharePoint share links need download=1 to return the file itself
-    rather than the Office web viewer wrapped in HTML."""
-    if 'download=1' not in url:
-        url += ('&' if '?' in url else '?') + 'download=1'
-    req = urllib.request.Request(url, headers={
-        'User-Agent': 'Mozilla/5.0 (compatible; MyGuide-dashboard-sync)'})
-    try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            data = r.read()
-    except urllib.error.HTTPError as e:
-        die('SharePoint returned HTTP %s. The share link may have expired, or it '
-            'may not be an "Anyone with the link" link.' % e.code)
-    except Exception as e:
-        die('Could not download the workbook: %s' % e)
-    if data[:2] != b'PK':
-        head = data[:400].decode('utf-8', 'replace')
-        die('The URL did not return an .xlsx file. It usually means the link asks '
-            'for a sign-in, so SharePoint sent an HTML login page instead.\n'
-            'Recreate the link with Share -> Anyone with the link -> Can view.\n'
-            'First bytes received:\n' + head)
-    return data
+    attempts = []
+    for candidate in _variants(url):
+        req = urllib.request.Request(candidate, headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; MyGuide-dashboard-sync)',
+            'Accept': '*/*'})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                data = r.read()
+                final = r.geturl()
+        except urllib.error.HTTPError as e:
+            attempts.append('%s -> HTTP %s' % (candidate, e.code))
+            continue
+        except Exception as e:
+            attempts.append('%s -> %s' % (candidate, e))
+            continue
+        if data[:2] == b'PK':
+            print('Downloaded the workbook (%d bytes) via: %s' % (len(data), candidate))
+            return data
+        snippet = data[:120].decode('utf-8', 'replace').replace('\n', ' ')
+        signin = 'sign in' in snippet.lower() or 'Sign in' in data[:4000].decode('utf-8', 'replace')
+        attempts.append('%s -> %s (%d bytes)%s'
+                        % (candidate, 'HTML sign-in page' if signin else 'not a file',
+                           len(data), '' if final == candidate else ' [redirected to %s]' % final))
+
+    die('Could not download the workbook as a file. Every URL form was tried and '
+        'none returned an .xlsx.\n\n'
+        'Attempts:\n  ' + '\n  '.join(attempts) + '\n\n'
+        'A sign-in page means the link is still scoped to your organisation. Fix it in '
+        'three places, in this order:\n'
+        '  1. SharePoint admin centre > Policies > Sharing > External sharing: set '
+        'SharePoint to "Anyone". A site can never be more permissive than the tenant, '
+        'so this has to be done first.\n'
+        '  2. Sites > Active sites > your site > Settings > External sharing: also set '
+        'to "Anyone".\n'
+        '  3. Re-share the file: Share > click the audience button > "Anyone with the '
+        'link" > Can view > Copy link. An existing organisation-scoped link does not '
+        'become anonymous by itself.\n'
+        'Then update the XLSX_URL secret with the NEW link and run the workflow again.')
 
 
 def norm(v):
