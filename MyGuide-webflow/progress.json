@@ -43,45 +43,45 @@
   "slides": {
     "Individual|Private": [
       1,
-      0,
-      0,
-      0,
-      0
+      230,
+      6,
+      130,
+      5
     ],
     "Professional|Private": [
       1,
-      0,
-      0,
-      0,
-      0
+      230,
+      6,
+      130,
+      5
     ],
     "Individual|Priority": [
       1,
-      0,
-      0,
-      0,
-      0
+      230,
+      6,
+      130,
+      5
     ],
     "Professional|Priority": [
       1,
-      0,
-      0,
-      0,
-      0
+      230,
+      6,
+      130,
+      5
     ],
     "Individual|Wealth Management": [
       1,
-      0,
-      0,
-      0,
-      0
+      230,
+      6,
+      130,
+      5
     ],
     "Professional|Wealth Management": [
       1,
-      0,
-      0,
-      0,
-      0
+      230,
+      6,
+      130,
+      5
     ]
   },
   "cells": {
@@ -393,7 +393,7 @@
         "v": false
       },
       {
-        "p": 70,
+        "p": 0,
         "f1": 0,
         "f2": 0,
         "v": false
