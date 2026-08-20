@@ -151,6 +151,20 @@
   .slidebox input::-webkit-outer-spin-button,.slidebox input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .slidebox input[type=number]{-moz-appearance:textfield}
   .slidebox span{font-size:11px;color:var(--muted)}
+  .dp{display:flex;align-items:center;gap:6px;margin-top:6px}
+  .dplab{font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+  .dpsteps{display:flex;gap:2px;border-radius:5px;outline:none;padding:2px;margin:-2px}
+  .dpsteps:focus-visible{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--brand-2)}
+  .dpstep{
+    width:20px;height:17px;border-radius:3px;background:var(--track);color:var(--muted);
+    font-size:9.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;
+    cursor:pointer;user-select:none;
+  }
+  .dpsteps.locked .dpstep{cursor:default}
+  .dpstep.on{background:var(--fill);color:#fff}
+  .dp.done .dpsteps{box-shadow:inset 0 0 0 2px var(--ring);border-radius:6px}
+  .dpstate{font-size:10.5px;color:var(--muted)}
+  .dpstate.ok{color:var(--fill);font-weight:650}
   .audtotal{text-align:right;font-size:12.5px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
   .audtotal small{display:block;font-size:10.5px;font-weight:400;color:var(--muted)}
 
@@ -266,17 +280,24 @@
   "locked": false,
   "baseWeight": 2,
   "slideWeighting": true,
+  "designProposalSlides": 20,
   "chapters": [
-    "Welkom bij {tier} banking",
+    "Welkom bij {tier}",
     "Advies op maat",
     "6 kernvragen",
     "MyDebrief",
     "Documentenbibliotheek"
   ],
-  "segments": ["Private", "Priority"],
+  "segments": ["Private", "Priority", "Wealth Management"],
+  "segmentLabels": {
+    "Private": "Private banking",
+    "Priority": "Priority banking",
+    "Wealth Management": "Wealth Management"
+  },
   "audiences": ["Individual", "Professional"],
   "languages": ["NL", "FR", "EN"],
   "baseLanguage": "NL",
+  "design": {},
   "slides": {},
   "cells": {}
 }
@@ -306,8 +327,9 @@
         <div class="herobar-scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
       </div>
       <div class="hero-meta">
-        <div><b id="doneCount">0</b> of 60 chapters at 100%</div>
-        <div><b id="valCount">0</b> client-validated · <b id="slideCount">—</b> slides across 12 decks</div>
+        <div><b id="doneCount">0</b> of <b id="chapTotal">—</b> chapters at 100%</div>
+        <div><b id="dpCount">0</b> design proposals approved · <b id="valCount">0</b> client-validated</div>
+        <div><b id="slideCount">—</b> slides across <b id="deckTotal">—</b> decks</div>
         <div style="opacity:.72">updated <span id="updStamp">—</span></div>
       </div>
     </div>
@@ -317,7 +339,7 @@
 <div class="wrap">
 
   <section>
-    <div class="sec-head"><h2>Delivery pipeline</h2><span class="sec-note">how far the 60 chapters have moved through each stage</span></div>
+    <div class="sec-head"><h2>Delivery pipeline</h2><span class="sec-note" id="pipeNote">progress through each stage</span></div>
     <div class="pipe" id="pipe"></div>
   </section>
 
@@ -353,7 +375,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><h2>Progress by chapter</h2><span class="sec-note">across all 12 variants</span></div>
+    <div class="sec-head"><h2>Progress by chapter</h2><span class="sec-note" id="chapNote">across all variants</span></div>
     <div class="card chaptbl">
       <table>
         <thead><tr>
@@ -385,7 +407,7 @@
       </table>
     </div>
     <p class="foot">
-      <span class="ednote"><b>The Excel workbook is the master record.</b> Keep <code>MyGuide-progress.xlsx</code> up to date in SharePoint, then here: <i>Import from Excel</i> → <i>Export figures (.json)</i> → upload the result as <code>progress.json</code>. The importer reads the <b>Progress</b> sheet (60 rows) and the <b>Slides</b> sheet (20 rows), matching columns by header name, so extra columns or a different column order are fine.<br>
+      <span class="ednote"><b>The Excel workbook is the master record.</b> Keep <code>MyGuide-progress.xlsx</code> up to date in SharePoint, then here: <i>Import from Excel</i> → <i>Export figures (.json)</i> → upload the result as <code>progress.json</code>. The importer reads three sheets — <b>Progress</b> (one row per deck × chapter), <b>Slides</b> (one row per segment × audience × chapter) and <b>Design</b> (one row per segment × audience) — matching columns by header name, so extra columns or a different column order are fine.<br>
       <b>Editing here instead.</b> You can still click directly: zone <i>n</i> in a strip sets that chapter to <i>n</i>×10%, clicking the last filled zone steps back, and arrow keys work when a strip has focus. The <b>1</b> and <b>2</b> pips cycle <i>not started → in review → processed</i>; <b>✓</b> toggles client validation; slide counts sit on the shaded audience row. Bear in mind these edits are not written back to Excel, so the next import overwrites them.<br></span>
       <b>Weighting.</b> Every percentage on this page is a weighted average, not a plain one, so that "50% done" reflects effort rather than a count of ticked boxes. Two factors combine:<br>
       &nbsp;&nbsp;<b>1 · Base language.</b> The NL decks are built from scratch; FR and EN are derived from them. We estimate the base version takes roughly <span id="wNote">2</span>× as long, so an NL chapter carries twice the weight of the same chapter in FR or EN. That factor is an estimate — if the translation rounds turn out heavier or lighter than expected, change <code>baseWeight</code> in the <code>myguide-data</code> block and every figure recalculates.<br>
@@ -406,6 +428,20 @@
   var NCH=CH.length, BW=DATA.baseWeight||2, BASELANG=DATA.baseLanguage||LANG[0];
   var SW = DATA.slideWeighting!==false;
   var ALLCH=[]; for(var _i=0;_i<NCH;_i++) ALLCH.push(_i);
+  var SEGLAB = DATA.segmentLabels || {};
+  function segLabel(s){ return SEGLAB[s] || s; }
+
+  /* Design proposal — one per segment × audience, sitting above that group's
+     language rows because all three languages wait on the same approved design.
+     Tracked as a ladder rather than a percentage, then mapped to a percentage
+     so it can carry weight in the totals. */
+  var DP_STATES = ['not started','draft','submitted','approved'];
+  var DP_SHORT  = ['—','D','S','A'];
+  var DP_PCT    = [0, 33, 67, 100];
+  var DP_SLIDES = (typeof DATA.designProposalSlides==='number') ? DATA.designProposalSlides : 20;
+  var design = DATA.design || {};
+  function dstate(gid){ var v=design[gid]; return (typeof v==='number' && v>=0 && v<DP_STATES.length) ? v : 0; }
+  function setDstate(gid,v){ design[gid]=Math.max(0,Math.min(DP_STATES.length-1,v)); }
   var slides = DATA.slides || {};
   var cells  = DATA.cells  || {};
   var locked = !!DATA.locked;
@@ -458,28 +494,43 @@
     return c;
   }
   function touch(){ dirty=true; document.getElementById('dirty').classList.add('show'); }
-  /* Weighted average of chapter progress.
-     Weight per cell = language factor (base ×BW) × slide count (when slide weighting is on).
-     If the slide side of the weight sums to zero — no slide counts entered yet — we fall
-     back to the language factor alone so the figures stay meaningful on an empty file.   */
-  function agg(list, chaps){
+  /* Weighted average of progress.
+     Weight per chapter = language factor (base ×BW) × slide count (when slide
+     weighting is on). If the slide side sums to zero — no slide counts entered
+     yet — we fall back to the language factor alone so the figures stay
+     meaningful on an empty file.
+
+     withDP adds each covered group's design proposal once, not once per
+     language, since the three languages share one proposal. Deck rows leave it
+     out so a deck total means that deck's own chapters; every roll-up above
+     deck level includes it.                                                  */
+  function agg(list, chaps, withDP){
+    var chDen=0;
+    list.forEach(function(d){ chaps.forEach(function(i){
+      chDen += d.w * (SW ? slideOf(d.gid,i) : 1);
+    });});
+    var useSlides = SW && chDen>0;
+
     var num=0, den=0;
     list.forEach(function(d){ chaps.forEach(function(i){
-      var w = d.w * (SW ? slideOf(d.gid,i) : 1);
+      var w = d.w * (useSlides ? slideOf(d.gid,i) : 1);
       num += cell(d.id,i).p * w; den += w;
     });});
-    if(den>0) return num/den;
-    num=0; den=0;
-    list.forEach(function(d){ chaps.forEach(function(i){
-      num += cell(d.id,i).p * d.w; den += d.w;
-    });});
+
+    if(withDP){
+      var gids={}; list.forEach(function(d){ gids[d.gid]=1; });
+      var dw = useSlides ? DP_SLIDES : 1;
+      if(dw>0) Object.keys(gids).forEach(function(gid){
+        num += DP_PCT[dstate(gid)] * dw; den += dw;
+      });
+    }
     return den? num/den : 0;
   }
-  function deckPct(d){ return agg([d], ALLCH); }
-  function wavg(list){ return agg(list, ALLCH); }
-  function chapWavg(i,list){ return agg(list||decks, [i]); }
-  function chapShort(i){ return CH[i].replace('{tier}','Private / Priority'); }
-  function chapTitle(i,seg){ return CH[i].replace('{tier}',seg||'Private'); }
+  function deckPct(d){ return agg([d], ALLCH, false); }   /* chapters only */
+  function wavg(list){ return agg(list, ALLCH, true); }   /* includes design proposals */
+  function chapWavg(i,list){ return agg(list||decks, [i], false); }
+  function chapShort(i){ return CH[i].replace('{tier}','[segment]'); }
+  function chapTitle(i,seg){ return CH[i].replace('{tier}', segLabel(seg||SEG[0])); }
   function fmt(n){ return Math.round(n); }
   function visDecks(){ return decks.filter(function(d){
     return filters.seg.has(d.seg)&&filters.aud.has(d.aud)&&filters.lang.has(d.lang); }); }
@@ -520,7 +571,7 @@
   function langCell(d,i){
     var c=cell(d.id,i);
     var wrap=document.createElement('div'); wrap.className='cellwrap';
-    var ctx=d.seg+' banking · '+d.aud+' · '+d.lang+'\n'+chapTitle(i,d.seg);
+    var ctx=segLabel(d.seg)+' · '+d.aud+' · '+d.lang+'\n'+chapTitle(i,d.seg);
 
     var a=document.createElement('div'); a.className='rowA';
     var strip=document.createElement('div');
@@ -582,6 +633,56 @@
     return wrap;
   }
 
+  /* The design proposal ladder: steps filled up to the current state, read the
+     same way as a zone strip. Click a step to set it, click the last filled
+     step to go back. */
+  function designControl(g){
+    var st=dstate(g.id);
+    var wrap=document.createElement('div'); wrap.className='dp'+(st>=DP_STATES.length-1?' done':'');
+    var lab=document.createElement('span'); lab.className='dplab'; lab.textContent='Design';
+    wrap.appendChild(lab);
+
+    var steps=document.createElement('div');
+    steps.className='dpsteps'+(locked?' locked':'');
+    steps.tabIndex=locked?-1:0;
+    steps.setAttribute('role','slider');
+    steps.setAttribute('aria-valuemin','0');
+    steps.setAttribute('aria-valuemax',String(DP_STATES.length-1));
+    steps.setAttribute('aria-valuenow',String(st));
+    steps.setAttribute('aria-valuetext',DP_STATES[st]);
+    steps.setAttribute('aria-label',g.aud+' · '+segLabel(g.seg)+' — design proposal: '+DP_STATES[st]);
+    steps.title=g.aud+' · '+segLabel(g.seg)+'\nDesign proposal: '+DP_STATES[st]+
+                '\ndraft → submitted → approved';
+    for(var k=1;k<DP_STATES.length;k++){
+      (function(k){
+        var b=document.createElement('span');
+        b.className='dpstep'+(k<=st?' on':'');
+        b.textContent=DP_SHORT[k];
+        b.title=DP_STATES[k];
+        if(!locked) b.onclick=function(ev){
+          ev.stopPropagation();
+          setDstate(g.id, dstate(g.id)===k ? k-1 : k);
+          touch(); renderAll();
+        };
+        steps.appendChild(b);
+      })(k);
+    }
+    if(!locked) steps.addEventListener('keydown',function(ev){
+      var cur=dstate(g.id), step=0;
+      if(ev.key==='ArrowRight'||ev.key==='ArrowUp') step=1;
+      else if(ev.key==='ArrowLeft'||ev.key==='ArrowDown') step=-1;
+      else return;
+      ev.preventDefault(); setDstate(g.id,cur+step); touch(); renderAll();
+    });
+    wrap.appendChild(steps);
+
+    var txt=document.createElement('span');
+    txt.className='dpstate'+(st>=DP_STATES.length-1?' ok':'');
+    txt.textContent=DP_STATES[st];
+    wrap.appendChild(txt);
+    return wrap;
+  }
+
   function buildBody(){
     var tb=document.getElementById('matBody'); tb.innerHTML='';
     var any=false;
@@ -593,7 +694,7 @@
 
       var sr=document.createElement('tr'); sr.className='segrow';
       var sc=document.createElement('td'); sc.colSpan=NCH+2;
-      sc.innerHTML='<span>'+sg+' banking</span> <span class="gpct">— '+fmt(wavg(segDecks))+'%</span><span class="rule"></span>';
+      sc.innerHTML='<span>'+segLabel(sg)+'</span> <span class="gpct">— '+fmt(wavg(segDecks))+'%</span><span class="rule"></span>';
       sr.appendChild(sc); tb.appendChild(sr);
 
       groups.filter(function(g){ return g.seg===sg && filters.aud.has(g.aud); }).forEach(function(g){
@@ -605,7 +706,8 @@
         var ar=document.createElement('tr'); ar.className='audrow';
         var ac=document.createElement('td');
         ac.innerHTML='<div class="aname">'+g.aud+' <span class="gpct">'+fmt(wavg(rows))+'%</span></div>'+
-                     '<div class="ameta">'+sg+' banking · slides apply to all languages</div>';
+                     '<div class="ameta">'+segLabel(sg)+' · slides apply to all languages</div>';
+        ac.appendChild(designControl(g));
         ar.appendChild(ac);
         for(var i=0;i<NCH;i++){
           (function(i){
@@ -614,8 +716,8 @@
             var inp=document.createElement('input');
             inp.type='number'; inp.min='0'; inp.max='999';
             inp.value=slideOf(g.id,i)||''; inp.placeholder='0'; inp.disabled=locked;
-            inp.title=g.aud+' · '+sg+' banking\n'+chapTitle(i,sg)+'\nSlides in this chapter (all languages)';
-            inp.setAttribute('aria-label',g.aud+' '+sg+' banking — '+chapTitle(i,sg)+': slides');
+            inp.title=g.aud+' · '+segLabel(sg)+'\n'+chapTitle(i,sg)+'\nSlides in this chapter (all languages)';
+            inp.setAttribute('aria-label',g.aud+' '+segLabel(sg)+' — '+chapTitle(i,sg)+': slides');
             inp.addEventListener('change',function(){
               slideRow(g.id)[i]=Math.max(0,Math.min(999,parseInt(inp.value,10)||0));
               touch(); renderAll();
@@ -637,7 +739,7 @@
           nm.appendChild(document.createTextNode(d.lang));
           if(d.base){ var bg=document.createElement('span'); bg.className='badge src'; bg.textContent='base'; nm.appendChild(bg); }
           var mt=document.createElement('div'); mt.className='langmeta';
-          mt.textContent='MyGuide '+d.aud.toLowerCase()+' · '+d.lang+' · '+d.seg+' banking';
+          mt.textContent='MyGuide '+d.aud.toLowerCase()+' · '+d.lang+' · '+segLabel(d.seg);
           td.appendChild(nm); td.appendChild(mt); tr.appendChild(td);
 
           for(var i=0;i<NCH;i++){ var c=document.createElement('td'); c.appendChild(langCell(d,i)); tr.appendChild(c); }
@@ -661,19 +763,21 @@
 
   /* ---------------- pipeline ---------------- */
   function counts(){
-    var n=decks.length*NCH, done=0,f1=0,f2=0,val=0,sl=0;
+    var n=decks.length*NCH, done=0,f1=0,f2=0,val=0,sl=0,dpOk=0;
+    groups.forEach(function(g){ if(dstate(g.id)>=DP_STATES.length-1) dpOk++; });
     decks.forEach(function(d){ for(var i=0;i<NCH;i++){ var c=cell(d.id,i);
       if(c.p>=100) done++; if(c.f1===2) f1++; if(c.f2===2) f2++; if(c.v) val++;
       sl+=slideOf(d.gid,i); }});
-    return {n:n,done:done,f1:f1,f2:f2,val:val,slides:sl};
+    return {n:n,done:done,f1:f1,f2:f2,val:val,slides:sl,dpOk:dpOk,ng:groups.length};
   }
   function buildPipe(){
     var k=counts(), h='';
-    [['Production complete',k.done,1],['Feedback round 1 processed',k.f1,2],
-     ['Feedback round 2 processed',k.f2,3],['Validated by client',k.val,4]].forEach(function(r){
-      var pct=k.n? r[1]/k.n*100 : 0;
-      h+='<div class="card pstep"><div class="pstep-lab"><span class="pnum">'+r[2]+'</span>'+r[0]+'</div>'+
-         '<div class="pstep-val">'+r[1]+'<small>/ '+k.n+'</small></div>'+
+    [['Design proposal approved',k.dpOk,k.ng,1],['Production complete',k.done,k.n,2],
+     ['Feedback round 1 processed',k.f1,k.n,3],['Feedback round 2 processed',k.f2,k.n,4],
+     ['Validated by client',k.val,k.n,5]].forEach(function(r){
+      var pct=r[2]? r[1]/r[2]*100 : 0;
+      h+='<div class="card pstep"><div class="pstep-lab"><span class="pnum">'+r[3]+'</span>'+r[0]+'</div>'+
+         '<div class="pstep-val">'+r[1]+'<small>/ '+r[2]+'</small></div>'+
          '<div class="minibar"><i style="width:'+pct+'%"></i></div></div>';
     });
     document.getElementById('pipe').innerHTML=h;
@@ -689,7 +793,7 @@
   function buildTiles(){
     var h='';
     SEG.forEach(function(s){ var l=decks.filter(function(d){return d.seg===s;});
-      h+=tile(s+' banking', wavg(l), l.length+' decks · '+l.length*NCH+' chapters'); });
+      h+=tile(segLabel(s), wavg(l), l.length+' decks · '+l.length*NCH+' chapters'); });
     AUD.forEach(function(a){ var l=decks.filter(function(d){return d.aud===a;});
       var sl=groups.filter(function(g){return g.aud===a;}).reduce(function(t,g){return t+groupSlides(g.id);},0);
       h+=tile(a, wavg(l), l.length+' decks'+(sl?' · '+sl+' slides':'')); });
@@ -726,7 +830,7 @@
   /* ---------------- table view ---------------- */
   function buildTable(){
     var hd=document.getElementById('tvHead'); hd.innerHTML='';
-    var cols=['Segment','Audience','Language','Lang. weight'];
+    var cols=['Segment','Audience','Language','Lang. weight','Design'];
     for(var i=0;i<NCH;i++) cols.push('Ch '+(i+1)+' %');
     cols.push('Deck %','Slides','FB1','FB2','Validated');
     cols.forEach(function(t,idx){ var th=document.createElement('th');
@@ -735,7 +839,7 @@
     visDecks().forEach(function(d){
       var tr=document.createElement('tr');
       function td(t,n){ var e=document.createElement('td'); e.textContent=t; if(n) e.className='n'; tr.appendChild(e); }
-      td(d.seg+' banking'); td(d.aud); td(d.lang); td('×'+d.w,true);
+      td(segLabel(d.seg)); td(d.aud); td(d.lang); td('×'+d.w,true); td(DP_STATES[dstate(d.gid)],true);
       var f1=0,f2=0,v=0;
       for(var i=0;i<NCH;i++){ var c=cell(d.id,i); td(c.p+'%',true);
         if(c.f1===2)f1++; if(c.f2===2)f2++; if(c.v)v++; }
@@ -751,8 +855,14 @@
     document.getElementById('heroPct').textContent=fmt(p);
     document.getElementById('heroBar').style.width=p+'%';
     document.getElementById('doneCount').textContent=k.done;
+    document.getElementById('chapTotal').textContent=k.n;
+    document.getElementById('deckTotal').textContent=decks.length;
+    document.getElementById('dpCount').textContent=k.dpOk+'/'+k.ng;
     document.getElementById('valCount').textContent=k.val;
     document.getElementById('slideCount').textContent=k.slides||'—';
+    document.getElementById('pipeNote').textContent=
+      'how far the '+k.n+' chapters and '+k.ng+' design proposals have moved through each stage';
+    document.getElementById('chapNote').textContent='across all '+decks.length+' variants';
     document.getElementById('updStamp').textContent=DATA.updated;
     document.getElementById('wNote').textContent=BW;
   }
@@ -805,7 +915,8 @@
     return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function snapshot(lockIt){
     var o=JSON.parse(JSON.stringify(DATA));
-    o.slides={}; groups.forEach(function(g){ o.slides[g.id]=slideRow(g.id).slice(); });
+    o.slides={}; o.design={};
+    groups.forEach(function(g){ o.slides[g.id]=slideRow(g.id).slice(); o.design[g.id]=dstate(g.id); });
     o.cells={};
     decks.forEach(function(d){
       o.cells[d.id]=[];
@@ -826,9 +937,11 @@
   };
   /* ---------------- import from Excel ----------------
      The SharePoint workbook is the master record. Two sheets are read:
-       Progress — 60 rows: Segment, Audience, Language, Chapter, Progress %,
-                  Feedback 1, Feedback 2, Validated
-       Slides   — 20 rows: Segment, Audience, Chapter, Slides
+       Progress — one row per deck x chapter: Segment, Audience, Language,
+                  Chapter, Progress %, Feedback 1, Feedback 2, Validated
+       Slides   — one row per segment x audience x chapter: Segment, Audience,
+                  Chapter, Slides
+       Design   — one row per segment x audience: Segment, Audience, Status
      Columns are matched by header name, so extra columns and reordering are
      fine; only the names matter. SheetJS is fetched on first use rather than
      bundled, so the dashboard stays a single small file.                    */
@@ -995,6 +1108,15 @@
     if(n.indexOf('review')>-1||n==='1'||n.indexOf('nazicht')>-1||n.indexOf('lopend')>-1) return 1;
     return 0;
   }
+  function toDp(v){
+    if(v==null||v==='') return 0;
+    if(typeof v==='number') return (v>=0&&v<DP_STATES.length)? v : 0;
+    var n=norm(v);
+    if(n.indexOf('approv')>-1||n.indexOf('goedgekeurd')>-1||n==='3') return 3;
+    if(n.indexOf('submit')>-1||n.indexOf('ingediend')>-1||n==='2') return 2;
+    if(n.indexOf('draft')>-1||n.indexOf('ontwerp')>-1||n==='1') return 1;
+    return 0;
+  }
   function toBool(v){
     if(v===true) return true;
     if(typeof v==='number') return v===1;
@@ -1087,6 +1209,22 @@
       }
     }
 
+    var nD=0, newDesign={};
+    var dName=pickSheet(wb,'Design',['segment','audience','status']);
+    if(dName){
+      var drows=wb.rows[dName]||[];
+      if(drows.length){
+        var gd=headerMap(drows[0]);
+        var dSeg=gd('segment'), dAud=gd('audience'), dSt=gd('status','designproposal','design');
+        drows.forEach(function(row){
+          var seg=matchOne(row[dSeg],SEG), aud=matchOne(row[dAud],AUD);
+          if(!seg||!aud) return;
+          newDesign[aud+'|'+seg]=dSt? toDp(row[dSt]) : 0;
+          nD++;
+        });
+      }
+    }
+
     if(!nP){
       showImport('<b>Nothing imported.</b> The Progress sheet was found but no row matched a known deck. '+
                  'Check that Segment reads Private/Priority, Audience reads Individual/Professional and '+
@@ -1102,10 +1240,17 @@
     cells=newCells;
     if(nS) { groups.forEach(function(g){ if(!newSlides[g.id]) newSlides[g.id]=new Array(NCH).fill(0); });
              slides=newSlides; }
+    if(nD) { groups.forEach(function(g){ if(typeof newDesign[g.id]!=='number') newDesign[g.id]=0; });
+             design=newDesign; }
     touch(); renderAll();
 
+    var bits=[];
+    if(nS) bits.push(nS+' slide values');
+    if(nD) bits.push(nD+' design proposals');
     var msg='<b>Imported '+nP+' of '+(decks.length*NCH)+' progress rows</b>'+
-            (nS? ' and '+nS+' slide values.' : '. No Slides sheet found — slide counts left as they were.')+
+            (bits.length? ', plus '+bits.join(' and ')+'.' : '.')+
+            (nS? '' : ' No Slides sheet found — slide counts left as they were.')+
+            (nD? '' : ' No Design sheet found — design proposals left as they were.')+
             ' Now click <i>Export figures (.json)</i> and upload the result as <code>progress.json</code>.';
     if(bad.length) msg+='<ul><li>'+bad.join('</li><li>')+'</li></ul>';
     if(nP<decks.length*NCH) msg+='<div style="margin-top:5px">Rows that did not import were set to 0%.</div>';
@@ -1138,7 +1283,7 @@
       try{
         var o=JSON.parse(r.result);
         if(o.cells){
-          cells=o.cells; slides=o.slides||{}; DATA.updated=o.updated||DATA.updated;
+          cells=o.cells; slides=o.slides||{}; design=o.design||{}; DATA.updated=o.updated||DATA.updated;
           if(typeof o.slideWeighting==='boolean'){ SW=o.slideWeighting; applySW(); }
           dirty=false; document.getElementById('dirty').classList.remove('show'); renderAll();
         } else alert('That file has no "cells" block — is it a MyGuide export?');
@@ -1153,6 +1298,7 @@
     if(!o || !o.cells) return false;
     cells  = o.cells;
     slides = o.slides || {};
+    design = o.design || {};
     if(o.updated) DATA.updated = o.updated;
     if(typeof o.slideWeighting==='boolean'){ SW=o.slideWeighting; applySW(); }
     if(typeof o.baseWeight==='number' && o.baseWeight>0){

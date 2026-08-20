@@ -4,8 +4,9 @@
   "locked": true,
   "baseWeight": 2,
   "slideWeighting": true,
+  "designProposalSlides": 20,
   "chapters": [
-    "Welkom bij {tier} banking",
+    "Welkom bij {tier}",
     "Advies op maat",
     "6 kernvragen",
     "MyDebrief",
@@ -13,8 +14,14 @@
   ],
   "segments": [
     "Private",
-    "Priority"
+    "Priority",
+    "Wealth Management"
   ],
+  "segmentLabels": {
+    "Private": "Private banking",
+    "Priority": "Priority banking",
+    "Wealth Management": "Wealth Management"
+  },
   "audiences": [
     "Individual",
     "Professional"
@@ -25,6 +32,14 @@
     "EN"
   ],
   "baseLanguage": "NL",
+  "design": {
+    "Individual|Private": 0,
+    "Professional|Private": 0,
+    "Individual|Priority": 0,
+    "Professional|Priority": 0,
+    "Individual|Wealth Management": 0,
+    "Professional|Wealth Management": 0
+  },
   "slides": {
     "Individual|Private": [
       0,
@@ -48,6 +63,20 @@
       0
     ],
     "Professional|Priority": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "Individual|Wealth Management": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "Professional|Wealth Management": [
       0,
       0,
       0,
@@ -409,6 +438,198 @@
       }
     ],
     "Professional|EN|Priority": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Individual|NL|Wealth Management": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Individual|FR|Wealth Management": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Individual|EN|Wealth Management": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Professional|NL|Wealth Management": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Professional|FR|Wealth Management": [
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      }
+    ],
+    "Professional|EN|Wealth Management": [
       {
         "p": 0,
         "f1": 0,
