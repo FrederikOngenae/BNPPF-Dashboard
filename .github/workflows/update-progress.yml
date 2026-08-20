@@ -12,7 +12,6 @@ on:
   # Lets you force a run from the Actions tab without waiting for the schedule.
   workflow_dispatch:
 
-# Only one sync at a time; a queued run supersedes an older waiting one.
 concurrency:
   group: update-progress
   cancel-in-progress: false
@@ -20,15 +19,44 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  # Where the dashboard's data file lives, relative to the repo root.
+  OUT: MyGuide-webflow/progress.json
+
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      # Fails early with a readable reason rather than letting a later step
+      # die with something cryptic. Everything it checks is a setup mistake.
+      - name: Preflight
+        run: |
+          fail() { echo "::error::$1"; echo "❌ $1" >> "$GITHUB_STEP_SUMMARY"; exit 1; }
+
+          echo "Repository root:"; ls -la
+          echo; echo "## Preflight" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ ! -f scripts/xlsx_to_json.py ]]; then
+            echo "Files found at the repo root:"; ls -1
+            fail "scripts/xlsx_to_json.py is missing. It must sit at the REPOSITORY ROOT, in a folder called 'scripts' — not inside MyGuide-webflow. In GitHub use Add file > Create new file and type the path scripts/xlsx_to_json.py so the folder is created."
+          fi
+
+          if [[ ! -f "$OUT" ]]; then
+            echo "Contents of MyGuide-webflow (if it exists):"; ls -1 MyGuide-webflow 2>/dev/null || echo "(no such folder)"
+            fail "$OUT is missing. That file is the template holding the chapter titles and weighting settings. Commit it once before enabling this workflow."
+          fi
+
+          if [[ -z "${{ secrets.XLSX_URL }}" ]]; then
+            fail "The XLSX_URL secret is empty or not set. Settings > Secrets and variables > Actions > New repository secret, named exactly XLSX_URL, with the SharePoint 'Anyone with the link' URL as its value."
+          fi
+
+          echo "✅ Script, data file and secret all present." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -38,18 +66,18 @@ jobs:
       - name: Convert the workbook to progress.json
         env:
           XLSX_URL: ${{ secrets.XLSX_URL }}
-          OUT: MyGuide-webflow/progress.json
         run: python scripts/xlsx_to_json.py
 
       - name: Commit if the figures changed
         run: |
-          if [[ -z "$(git status --porcelain MyGuide-webflow/progress.json)" ]]; then
+          if [[ -z "$(git status --porcelain "$OUT")" ]]; then
             echo "No change — nothing to commit."
+            echo "No change in the figures this run." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add MyGuide-webflow/progress.json
+          git add "$OUT"
           git commit -m "Update progress figures from SharePoint workbook"
           git push
-          echo "Committed updated figures."
+          echo "Committed updated figures." >> "$GITHUB_STEP_SUMMARY"
