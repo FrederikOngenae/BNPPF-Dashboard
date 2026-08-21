@@ -1,6 +1,6 @@
 {
   "project": "MyGuide",
-  "updated": "2026-08-20",
+  "updated": "2026-08-21",
   "locked": true,
   "baseWeight": 2,
   "slideWeighting": true,
@@ -105,7 +105,7 @@
         "v": false
       },
       {
-        "p": 0,
+        "p": 10,
         "f1": 0,
         "f2": 0,
         "v": false
@@ -393,7 +393,7 @@
         "v": false
       },
       {
-        "p": 50,
+        "p": 0,
         "f1": 0,
         "f2": 0,
         "v": false
