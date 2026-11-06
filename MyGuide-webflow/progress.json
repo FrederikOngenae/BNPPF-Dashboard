@@ -1,6 +1,6 @@
 {
   "project": "MyGuide",
-  "updated": "2026-08-31",
+  "updated": "2026-11-06",
   "locked": true,
   "baseWeight": 2,
   "slideWeighting": true,
@@ -37,7 +37,7 @@
     "Professional|Private": 0,
     "Individual|Priority": 0,
     "Professional|Priority": 0,
-    "Individual|Wealth Management": 0,
+    "Individual|Wealth Management": 1,
     "Professional|Wealth Management": 0
   },
   "slides": {
@@ -93,18 +93,6 @@
         "v": false
       },
       {
-        "p": 0,
-        "f1": 0,
-        "f2": 0,
-        "v": false
-      },
-      {
-        "p": 0,
-        "f1": 0,
-        "f2": 0,
-        "v": false
-      },
-      {
         "p": 20,
         "f1": 0,
         "f2": 0,
@@ -112,6 +100,18 @@
       },
       {
         "p": 0,
+        "f1": 0,
+        "f2": 0,
+        "v": false
+      },
+      {
+        "p": 100,
+        "f1": 2,
+        "f2": 1,
+        "v": false
+      },
+      {
+        "p": 20,
         "f1": 0,
         "f2": 0,
         "v": false
@@ -471,7 +471,7 @@
     ],
     "Individual|NL|Wealth Management": [
       {
-        "p": 0,
+        "p": 80,
         "f1": 0,
         "f2": 0,
         "v": false
