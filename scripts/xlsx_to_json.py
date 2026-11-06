@@ -17,7 +17,7 @@ Environment:
   OUT             output path       (default MyGuide-webflow/progress.json)
   ALLOW_PARTIAL   set to 1 to publish even when rows are missing
 """
-import os, sys, json, re, io, datetime, urllib.request, urllib.error
+import os, sys, json, re, io, datetime, urllib.request, urllib.error, http.cookiejar
 
 OUT = os.environ.get('OUT', 'MyGuide-webflow/progress.json')
 URL = os.environ.get('XLSX_URL', '').strip()
