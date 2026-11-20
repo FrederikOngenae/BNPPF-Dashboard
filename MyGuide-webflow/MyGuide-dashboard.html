@@ -282,6 +282,12 @@
   "baseWeight": 2,
   "slideWeighting": true,
   "designProposalSlides": 20,
+  "excludedChapters": [3],
+  "segmentEffort": {
+    "Private": 1,
+    "Priority": 0.33,
+    "Wealth Management": 1
+  },
   "chapters": [
     "Welkom bij {tier}",
     "Advies op maat",
@@ -309,7 +315,7 @@
     <div class="band-top">
       <div>
         <h1>MyGuide <span class="lower">— production progress</span></h1>
-        <p class="band-sub">Structured by segment › audience › language. Slide counts are set once per audience — they are identical across NL, FR and EN. The NL decks are the base versions all other languages derive from. All percentages are weighted; the method is explained in the notes at the bottom.</p>
+        <p class="band-sub">Structured by segment › audience › language. Slide counts are set once per audience — they are identical across NL, FR and EN. The NL decks are the base versions all other languages derive from. All percentages are weighted, and chapters listed as excluded are left out entirely; the method is explained in the notes at the bottom.</p>
       </div>
       <div class="band-tools">
         <button class="chipbtn" id="swBtn" aria-pressed="true" title="Weight each chapter by its slide count">⚖ <span>Slide-weighted</span></button>
@@ -412,9 +418,11 @@
       <b>Editing here instead.</b> You can still click directly: zone <i>n</i> in a strip sets that chapter to <i>n</i>×10%, clicking the last filled zone steps back, and arrow keys work when a strip has focus. The <b>1</b> and <b>2</b> pips cycle <i>not started → in review → processed</i>; <b>✓</b> toggles client validation; slide counts sit on the shaded audience row. Bear in mind these edits are not written back to Excel, so the next import overwrites them.<br></span>
       <b>Weighting.</b> Every percentage on this page is a weighted average, not a plain one, so that "50% done" reflects effort rather than a count of ticked boxes. Two factors combine:<br>
       &nbsp;&nbsp;<b>1 · Base language.</b> The NL decks are built from scratch; FR and EN are derived from them. We estimate the base version takes roughly <span id="wNote">2</span>× as long, so an NL chapter carries twice the weight of the same chapter in FR or EN. That factor is an estimate — if the translation rounds turn out heavier or lighter than expected, change <code>baseWeight</code> in the <code>myguide-data</code> block and every figure recalculates.<br>
-      &nbsp;&nbsp;<b>2 · Slide volume.</b> With <i>Slide-weighted</i> on (top right), each chapter also counts in proportion to its slide count, so a 22-slide chapter moves the needle more than a 9-slide one. Switch it off to weight all five chapters equally. It only engages once <b>every</b> chapter of <b>every</b> segment and audience has a slide count — partial data would let the few filled-in chapters carry the whole figure, so until the Slides tab is complete the dashboard counts all chapters equally and the button turns amber to say so.<br>
+      &nbsp;&nbsp;<b>2 · Segment.</b> Private is built first and Priority is derived from it, going an estimated <b>3× faster</b>, so a Priority chapter carries a third of the weight of the same chapter in Private. Wealth Management is currently set to the same effort as Private — change <code>segmentEffort</code> in the <code>myguide-data</code> block if that is wrong. The factor applies to that segment's design proposal too.<br>
+      &nbsp;&nbsp;<b>3 · Slide volume.</b> With <i>Slide-weighted</i> on (top right), each chapter also counts in proportion to its slide count, so a 22-slide chapter moves the needle more than a 9-slide one. Switch it off to weight all five chapters equally. It only engages once <b>every</b> chapter of <b>every</b> segment and audience has a slide count — partial data would let the few filled-in chapters carry the whole figure, so until the Slides tab is complete the dashboard counts all chapters equally and the button turns amber to say so.<br>
       <span class="ednote"><b>Sharing with the client.</b> Click <i>Download dashboard</i> for a single standalone .html file with the current figures baked in and editing locked. Just send it — no server, no install. To publish to a web page instead, export <i>Cijfers</i> as <code>progress.json</code>, drop it next to this file on your host, and load the page with <code>?data=progress.json</code>.<br>
-      <b>Chapter titles and weighting</b> live in the <code>myguide-data</code> block at the top of the file; <code>{tier}</code> resolves to Private or Priority. Colours come from the MyGuide PowerPoint theme (Accent 1 <code>#004c45</code>, Dark 2 <code>#017f50</code>).</span>
+      <b>Excluded chapters.</b> <code>excludedChapters</code> lists the chapters left out of the dashboard, numbered as the workbook numbers them. Chapter 3 (<i>6 kernvragen</i>) is currently excluded: it stays in the spreadsheet and in the data, but is left out of every column, total and count here, so nothing has to be renumbered and putting it back is a one-line change. The remaining chapters keep their original numbers.<br>
+      <b>Chapter titles and weighting</b> live in the <code>myguide-data</code> block at the top of the file; <code>{tier}</code> resolves to the segment name. Colours come from the MyGuide PowerPoint theme (Accent 1 <code>#004c45</code>, Dark 2 <code>#017f50</code>).</span>
       <span id="srcNote"></span>
     </p>
   </section>
@@ -428,9 +436,22 @@
   var SEG=DATA.segments, AUD=DATA.audiences, LANG=DATA.languages, CH=DATA.chapters;
   var NCH=CH.length, BW=DATA.baseWeight||2, BASELANG=DATA.baseLanguage||LANG[0];
   var SW = DATA.slideWeighting!==false;
-  var ALLCH=[]; for(var _i=0;_i<NCH;_i++) ALLCH.push(_i);
+  /* Chapters listed in excludedChapters (1-based, as the spreadsheet numbers
+     them) are dropped from the dashboard but kept in the data and in the
+     workbook, so nothing has to be renumbered and bringing one back is a
+     one-line change. ACTIVE holds the indices that still count. */
+  var EXCL={}; (DATA.excludedChapters||[]).forEach(function(n){ EXCL[n-1]=true; });
+  var ACTIVE=[]; for(var _i=0;_i<NCH;_i++) if(!EXCL[_i]) ACTIVE.push(_i);
+  var NACT=ACTIVE.length;
   var SEGLAB = DATA.segmentLabels || {};
   function segLabel(s){ return SEGLAB[s] || s; }
+
+  /* Effort per segment, relative to the one that gets built first. Priority is
+     derived from Private and goes roughly three times faster, so its chapters
+     carry a third of the weight. Same idea as the base-language factor, one
+     axis up. */
+  var SEGEFF = DATA.segmentEffort || {};
+  function segEffort(s){ var v=SEGEFF[s]; return (typeof v==='number' && v>0) ? v : 1; }
 
   /* Design proposal — one per segment × audience, sitting above that group's
      language rows because all three languages wait on the same approved design.
@@ -470,11 +491,13 @@
     var g={ id:gid, seg:s, aud:a, decks:[] };
     LANG.forEach(function(l){
       var base = l===BASELANG;
-      var d={ id:a+'|'+l+'|'+s, gid:gid, aud:a, lang:l, seg:s, base:base, w: base?BW:1 };
+      var d={ id:a+'|'+l+'|'+s, gid:gid, aud:a, lang:l, seg:s, base:base,
+              w: (base?BW:1) * segEffort(s) };
       g.decks.push(d); decks.push(d);
     });
     groups.push(g);
   });});
+  var GBY={}; groups.forEach(function(g){ GBY[g.id]=g; });
 
   /* ---- data accessors ---- */
   function slideRow(gid){
@@ -483,7 +506,7 @@
     return slides[gid];
   }
   function slideOf(gid,i){ var v=slideRow(gid)[i]; return typeof v==='number'?v:0; }
-  function groupSlides(gid){ var s=0; for(var i=0;i<NCH;i++) s+=slideOf(gid,i); return s; }
+  function groupSlides(gid){ var s=0; ACTIVE.forEach(function(i){ s+=slideOf(gid,i); }); return s; }
   function cell(id,i){
     if(!cells[id]) cells[id]=[];
     if(!cells[id][i]) cells[id][i]={p:0,f1:0,f2:0,v:false};
@@ -514,7 +537,7 @@
   function slidesComplete(){
     for(var gi=0; gi<groups.length; gi++){
       var row=slideRow(groups[gi].id);
-      for(var i=0;i<NCH;i++) if(!(row[i]>0)) return false;
+      for(var ai=0;ai<NACT;ai++) if(!(row[ACTIVE[ai]]>0)) return false;
     }
     return true;
   }
@@ -539,15 +562,17 @@
          all six proposals against only its own third of the chapter weight, and
          FR would read higher than NL at identical progress. */
       var seen={}; list.forEach(function(d){ seen[d.gid]=(seen[d.gid]||0)+1; });
-      var dw = useSlides ? DP_SLIDES : 1;
-      if(dw>0) Object.keys(seen).forEach(function(gid){
-        if(seen[gid]===LANG.length){ num += DP_PCT[dstate(gid)] * dw; den += dw; }
+      var dwBase = useSlides ? DP_SLIDES : 1;
+      if(dwBase>0) Object.keys(seen).forEach(function(gid){
+        if(seen[gid]!==LANG.length) return;
+        var dw = dwBase * segEffort(GBY[gid] ? GBY[gid].seg : '');
+        num += DP_PCT[dstate(gid)] * dw; den += dw;
       });
     }
     return den? num/den : 0;
   }
-  function deckPct(d){ return agg([d], ALLCH, false); }   /* chapters only */
-  function wavg(list){ return agg(list, ALLCH, true); }   /* includes design proposals */
+  function deckPct(d){ return agg([d], ACTIVE, false); }  /* chapters only */
+  function wavg(list){ return agg(list, ACTIVE, true); }  /* includes design proposals */
   function chapWavg(i,list){ return agg(list||decks, [i], false); }
   function chapShort(i){ return CH[i].replace('{tier}','[segment]'); }
   function chapTitle(i,seg){ return CH[i].replace('{tier}', segLabel(seg||SEG[0])); }
@@ -578,7 +603,8 @@
   function buildHead(){
     var tr=document.getElementById('matHead'); tr.innerHTML='';
     var th=document.createElement('th'); th.textContent='Segment › audience › language'; tr.appendChild(th);
-    for(var i=0;i<NCH;i++){
+    for(var ai=0;ai<NACT;ai++){
+      var i=ACTIVE[ai];
       var t=document.createElement('th'); t.className='chap';
       t.innerHTML='<span class="chnum">Ch '+(i+1)+'</span>'+chapShort(i);
       tr.appendChild(t);
@@ -713,7 +739,7 @@
       if(!segDecks.length) return;
 
       var sr=document.createElement('tr'); sr.className='segrow';
-      var sc=document.createElement('td'); sc.colSpan=NCH+2;
+      var sc=document.createElement('td'); sc.colSpan=NACT+2;
       sc.innerHTML='<span>'+segLabel(sg)+'</span> <span class="gpct">— '+fmt(wavg(segDecks))+'%</span><span class="rule"></span>';
       sr.appendChild(sc); tb.appendChild(sr);
 
@@ -729,7 +755,7 @@
                      '<div class="ameta">'+segLabel(sg)+' · slides apply to all languages</div>';
         ac.appendChild(designControl(g));
         ar.appendChild(ac);
-        for(var i=0;i<NCH;i++){
+        for(var ai=0;ai<NACT;ai++){
           (function(i){
             var td=document.createElement('td');
             var box=document.createElement('label'); box.className='slidebox';
@@ -745,7 +771,7 @@
             var sp=document.createElement('span'); sp.textContent='slides';
             box.appendChild(inp); box.appendChild(sp);
             td.appendChild(box); ar.appendChild(td);
-          })(i);
+          })(ACTIVE[ai]);
         }
         var at=document.createElement('td'); at.className='audtotal';
         at.innerHTML=(groupSlides(g.id)||'—')+'<small>slides / deck</small>';
@@ -762,7 +788,7 @@
           mt.textContent='MyGuide '+d.aud.toLowerCase()+' · '+d.lang+' · '+segLabel(d.seg);
           td.appendChild(nm); td.appendChild(mt); tr.appendChild(td);
 
-          for(var i=0;i<NCH;i++){ var c=document.createElement('td'); c.appendChild(langCell(d,i)); tr.appendChild(c); }
+          ACTIVE.forEach(function(i){ var c=document.createElement('td'); c.appendChild(langCell(d,i)); tr.appendChild(c); });
 
           var p=deckPct(d);
           var tc=document.createElement('td'); tc.className='totalcell';
@@ -775,7 +801,7 @@
 
     if(!any){
       var tr=document.createElement('tr'), td=document.createElement('td');
-      td.colSpan=NCH+2; td.style.padding='26px'; td.style.color='var(--muted)';
+      td.colSpan=NACT+2; td.style.padding='26px'; td.style.color='var(--muted)';
       td.textContent='No decks match the current filters.';
       tr.appendChild(td); tb.appendChild(tr);
     }
@@ -783,11 +809,11 @@
 
   /* ---------------- pipeline ---------------- */
   function counts(){
-    var n=decks.length*NCH, done=0,f1=0,f2=0,val=0,sl=0,dpOk=0;
+    var n=decks.length*NACT, done=0,f1=0,f2=0,val=0,sl=0,dpOk=0;
     groups.forEach(function(g){ if(dstate(g.id)>=DP_STATES.length-1) dpOk++; });
-    decks.forEach(function(d){ for(var i=0;i<NCH;i++){ var c=cell(d.id,i);
+    decks.forEach(function(d){ ACTIVE.forEach(function(i){ var c=cell(d.id,i);
       if(c.p>=100) done++; if(c.f1===2) f1++; if(c.f2===2) f2++; if(c.v) val++;
-      sl+=slideOf(d.gid,i); }});
+      sl+=slideOf(d.gid,i); }); });
     return {n:n,done:done,f1:f1,f2:f2,val:val,slides:sl,dpOk:dpOk,ng:groups.length};
   }
   function buildPipe(){
@@ -813,7 +839,7 @@
   function buildTiles(){
     var h='';
     SEG.forEach(function(s){ var l=decks.filter(function(d){return d.seg===s;});
-      h+=tile(segLabel(s), wavg(l), l.length+' decks · '+l.length*NCH+' chapters'); });
+      h+=tile(segLabel(s), wavg(l), l.length+' decks · '+l.length*NACT+' chapters'); });
     AUD.forEach(function(a){ var l=decks.filter(function(d){return d.aud===a;});
       var sl=groups.filter(function(g){return g.aud===a;}).reduce(function(t,g){return t+groupSlides(g.id);},0);
       h+=tile(a, wavg(l), l.length+' decks'+(sl?' · '+sl+' slides':'')); });
@@ -825,7 +851,7 @@
   /* ---------------- chapter table ---------------- */
   function buildChap(){
     var tb=document.getElementById('chapBody'); tb.innerHTML='';
-    for(var i=0;i<NCH;i++){
+    for(var ai=0;ai<NACT;ai++){
       (function(i){
         var p=chapWavg(i), f1=0,f2=0,v=0;
         decks.forEach(function(d){ var c=cell(d.id,i); if(c.f1===2)f1++; if(c.f2===2)f2++; if(c.v)v++; });
@@ -843,7 +869,7 @@
           '<td class="n">'+f2+'/'+decks.length+'</td>'+
           '<td class="n">'+v+'/'+decks.length+'</td>';
         tb.appendChild(tr);
-      })(i);
+      })(ACTIVE[ai]);
     }
   }
 
@@ -851,7 +877,7 @@
   function buildTable(){
     var hd=document.getElementById('tvHead'); hd.innerHTML='';
     var cols=['Segment','Audience','Language','Lang. weight','Design'];
-    for(var i=0;i<NCH;i++) cols.push('Ch '+(i+1)+' %');
+    ACTIVE.forEach(function(i){ cols.push('Ch '+(i+1)+' %'); });
     cols.push('Deck %','Slides','FB1','FB2','Validated');
     cols.forEach(function(t,idx){ var th=document.createElement('th');
       th.textContent=t; if(idx>2) th.className='n'; hd.appendChild(th); });
@@ -859,12 +885,12 @@
     visDecks().forEach(function(d){
       var tr=document.createElement('tr');
       function td(t,n){ var e=document.createElement('td'); e.textContent=t; if(n) e.className='n'; tr.appendChild(e); }
-      td(segLabel(d.seg)); td(d.aud); td(d.lang); td('×'+d.w,true); td(DP_STATES[dstate(d.gid)],true);
+      td(segLabel(d.seg)); td(d.aud); td(d.lang); td('×'+(Math.round(d.w*100)/100),true); td(DP_STATES[dstate(d.gid)],true);
       var f1=0,f2=0,v=0;
-      for(var i=0;i<NCH;i++){ var c=cell(d.id,i); td(c.p+'%',true);
-        if(c.f1===2)f1++; if(c.f2===2)f2++; if(c.v)v++; }
+      ACTIVE.forEach(function(i){ var c=cell(d.id,i); td(c.p+'%',true);
+        if(c.f1===2)f1++; if(c.f2===2)f2++; if(c.v)v++; });
       td(fmt(deckPct(d))+'%',true); td(groupSlides(d.gid)||'—',true);
-      td(f1+'/'+NCH,true); td(f2+'/'+NCH,true); td(v+'/'+NCH,true);
+      td(f1+'/'+NACT,true); td(f2+'/'+NACT,true); td(v+'/'+NACT,true);
       tb.appendChild(tr);
     });
   }
@@ -1279,7 +1305,7 @@
     var bits=[];
     if(nS) bits.push(nS+' slide values');
     if(nD) bits.push(nD+' design proposals');
-    var msg='<b>Imported '+nP+' of '+(decks.length*NCH)+' progress rows</b>'+
+    var msg='<b>Imported '+nP+' of '+(decks.length*NCH)+' workbook rows</b>'+
             (bits.length? ', plus '+bits.join(' and ')+'.' : '.')+
             (nS? '' : ' No Slides sheet found — slide counts left as they were.')+
             (nD? '' : ' No Design sheet found — design proposals left as they were.')+
