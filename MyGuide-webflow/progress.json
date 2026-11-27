@@ -1,6 +1,6 @@
 {
   "project": "MyGuide",
-  "updated": "2026-11-20",
+  "updated": "2026-11-27",
   "locked": true,
   "baseWeight": 2,
   "slideWeighting": true,
@@ -43,16 +43,16 @@
   "slides": {
     "Individual|Private": [
       1,
-      160,
+      260,
       0,
-      240,
+      457,
       10
     ],
     "Professional|Private": [
       1,
-      100,
+      0,
       9,
-      26,
+      0,
       5
     ],
     "Individual|Priority": [
@@ -93,7 +93,7 @@
         "v": false
       },
       {
-        "p": 100,
+        "p": 70,
         "f1": 0,
         "f2": 0,
         "v": false
